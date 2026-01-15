@@ -2,20 +2,18 @@ task: detect
 mode: train
 model: yolo11n.pt
 data: yolov11_bumblebee.yaml
-epochs: 50
+epochs: 500
 time: null
 patience: 100
 batch: 16
-imgsz:
-- 96
-- 96
+imgsz: 224
 save: true
 save_period: -1
 cache: true
 device: cpu
 workers: 8
 project: null
-name: train2
+name: train
 exist_ok: false
 pretrained: true
 optimizer: auto
@@ -105,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\nilsg\repos\BeeSense\models\runs\detect\train2
+save_dir: C:\Users\nilsg\repos\BeeSense\models\runs\detect\train

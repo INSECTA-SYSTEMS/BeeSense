@@ -1,4 +1,4 @@
-path: ../data
+path: ../data/bumblebees
 train: images/train
 val: images/val
 
