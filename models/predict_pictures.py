@@ -5,8 +5,8 @@ model = YOLO("runs/detect/train_224_224/weights/best.pt")
 
 # Inferenz auf allen Testbildern im Ordner
 results = model.predict(
-    source="../data/images/test/",  # Pfad zum Test-Ordner
-    conf=0.4,   # Confidence Threshold, z.B. 0.3
+    source="../data/bumblebees/images/test/",  # Pfad zum Test-Ordner
+    conf=0.3,   # Confidence Threshold
     save=True,  # speichert Bilder mit Bounding Boxes
     show=False  # kein Fenster öffnen
 )
