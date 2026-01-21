@@ -213,6 +213,9 @@ extern "C" void app_main(void)
                 if (y2 < y1) std::swap(y1, y2);
                 std::vector<uint8_t> color = {255, 0, 0}; // Rot
                 dl::image::draw_hollow_rectangle(cropped_img, x1, y1, x2, y2, color, 2);
+                
+                // Confidence Score anzeigen
+                ESP_LOGI(TAG, "Hummel erkannt mit Confidence: %.2f (Pos: x=%d, y=%d)", res.score, (x1+x2)/2, (y1+y2)/2);
                 ++result_count;
 
                 // Mittelpunkt der Box berechnen
