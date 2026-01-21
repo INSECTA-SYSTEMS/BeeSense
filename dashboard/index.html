@@ -388,13 +388,13 @@
     });
 
     // ---------------------------------------
-    // Funktion zum Aktualisieren der Diagramme mit echten Daten
+    // Funktion zum Aktualisieren der Diagramme mit echten Daten aus Datenbank
     // ---------------------------------------
     function updateChartsWithHistoricalData() {
-      fetch("/api/history")
+      fetch("/api/history?days=7")
         .then(res => res.json())
         .then(data => {
-          console.log("Historische Daten geladen:", data);
+          console.log("📊 Historische Daten aus Datenbank geladen:", data);
           
           // Flugdaten aktualisieren
           if (data.flights && data.flights.length > 0) {
@@ -403,11 +403,15 @@
             data.flights.forEach(day => {
               const date = new Date(day.date);
               flightLabels.push(date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
-              flightData.push(day.total);
+              flightData.push(day.total || 0);
             });
-            flightsChart.data.labels = flightLabels;
-            flightsChart.data.datasets[0].data = flightData;
-            flightsChart.update();
+            
+            if (flightLabels.length > 0) {
+              flightsChart.data.labels = flightLabels;
+              flightsChart.data.datasets[0].data = flightData;
+              flightsChart.update();
+              console.log("✅ Flugdiagramm aktualisiert mit", flightLabels.length, "Tagen");
+            }
           }
           
           // Temperaturdaten aktualisieren
@@ -415,13 +419,20 @@
             const tempLabels = [];
             const tempData = [];
             data.temperature.forEach(day => {
-              const date = new Date(day.date);
-              tempLabels.push(date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
-              tempData.push(parseFloat(day.avg.toFixed(1)));
+              // Nur Tage mit Daten anzeigen
+              if (day.avg !== null && day.avg !== undefined) {
+                const date = new Date(day.date);
+                tempLabels.push(date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+                tempData.push(parseFloat(day.avg.toFixed(1)));
+              }
             });
-            tempChart.data.labels = tempLabels;
-            tempChart.data.datasets[0].data = tempData;
-            tempChart.update();
+            
+            if (tempLabels.length > 0) {
+              tempChart.data.labels = tempLabels;
+              tempChart.data.datasets[0].data = tempData;
+              tempChart.update();
+              console.log("✅ Temperaturdiagramm aktualisiert mit", tempLabels.length, "Tagen");
+            }
           }
           
           // Feuchtigkeitsdaten aktualisieren
@@ -429,17 +440,24 @@
             const humLabels = [];
             const humData = [];
             data.humidity.forEach(day => {
-              const date = new Date(day.date);
-              humLabels.push(date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
-              humData.push(parseFloat(day.avg.toFixed(1)));
+              // Nur Tage mit Daten anzeigen
+              if (day.avg !== null && day.avg !== undefined) {
+                const date = new Date(day.date);
+                humLabels.push(date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+                humData.push(parseFloat(day.avg.toFixed(1)));
+              }
             });
-            humChart.data.labels = humLabels;
-            humChart.data.datasets[0].data = humData;
-            humChart.update();
+            
+            if (humLabels.length > 0) {
+              humChart.data.labels = humLabels;
+              humChart.data.datasets[0].data = humData;
+              humChart.update();
+              console.log("✅ Feuchtigkeitsdiagramm aktualisiert mit", humLabels.length, "Tagen");
+            }
           }
         })
         .catch(err => {
-          console.log("Keine historischen Daten verfügbar", err);
+          console.log("⚠️ Keine historischen Daten verfügbar:", err.message);
         });
     }
 
@@ -695,7 +713,17 @@
         try {
           const data = JSON.parse(event.data);
           console.log("Daten empfangen:", data);
-          updateUI(data);
+          
+          // Tracking-Daten aktualisieren
+          if (data.tracking) {
+            updateUI(data.tracking);
+          }
+          
+          // Sensor-Daten aktualisieren
+          if (data.sensors) {
+            updateSensorData(data.sensors);
+          }
+          
           setConnectionStatus(true);
         } catch (e) {
           console.error("Fehler beim Parsen:", e);
