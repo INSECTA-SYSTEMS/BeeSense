@@ -10,8 +10,12 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const BeeSenseDatabase = require('./database');
 
 const PORT = 8080;
+
+// Initialize database
+const db = new BeeSenseDatabase();
 
 // Aktuelle Tracking-Daten
 let trackingData = {
@@ -27,13 +31,6 @@ let sensorData = {
     humidity: null,
     timestamp: Date.now(),
     lastUpdate: null
-};
-
-// Historische Daten für Graphen (letzte 7 Tage)
-let historicalData = {
-    flights: [], // { date: '2026-01-10', einflug: 10, ausflug: 8, total: 18 }
-    temperature: [], // { date: '2026-01-10', avg: 24.5, values: [22, 24, 26] }
-    humidity: [] // { date: '2026-01-10', avg: 65.2, values: [60, 65, 70] }
 };
 
 // Server-Sent Events Clients (für Live-Updates)
@@ -84,6 +81,16 @@ const server = http.createServer((req, res) => {
 
                 console.log(`[${new Date().toLocaleTimeString()}] Tracking empfangen:`, trackingData);
 
+                // In Datenbank speichern
+                if (data.einflug > 0) {
+                    db.insertBeeDetection('einflug', null, null, trackingData.timestamp)
+                        .catch(err => console.error('DB Error (einflug):', err.message));
+                }
+                if (data.ausflug > 0) {
+                    db.insertBeeDetection('ausflug', null, null, trackingData.timestamp)
+                        .catch(err => console.error('DB Error (ausflug):', err.message));
+                }
+
                 // Alle SSE Clients benachrichtigen
                 broadcastToClients(trackingData);
 
@@ -115,6 +122,10 @@ const server = http.createServer((req, res) => {
                 };
 
                 console.log(`[${new Date().toLocaleTimeString()}] Sensor-Daten empfangen:`, sensorData);
+
+                // In Datenbank speichern
+                db.insertSensorData(sensorData.temperature, sensorData.humidity, sensorData.timestamp)
+                    .catch(err => console.error('DB Error (sensor):', err.message));
 
                 // Alle SSE Clients benachrichtigen
                 broadcastToClients({ tracking: trackingData, sensors: sensorData });
@@ -153,8 +164,40 @@ const server = http.createServer((req, res) => {
 
     // API: Historische Daten abrufen (GET)
     if (url.pathname === '/api/history' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(historicalData));
+        // Get date range from query parameters (default: last 7 days)
+        const days = parseInt(url.searchParams.get('days')) || 7;
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        db.getDailyStats(startDate, endDate)
+            .then(stats => {
+                // Convert to format expected by frontend
+                const formattedData = {
+                    flights: stats.map(s => ({
+                        date: s.date,
+                        einflug: s.einflug_count,
+                        ausflug: s.ausflug_count,
+                        total: s.total_flights
+                    })),
+                    temperature: stats.map(s => ({
+                        date: s.date,
+                        avg: s.avg_temperature,
+                        values: [s.min_temperature, s.avg_temperature, s.max_temperature].filter(v => v !== null)
+                    })),
+                    humidity: stats.map(s => ({
+                        date: s.date,
+                        avg: s.avg_humidity,
+                        values: [s.avg_humidity].filter(v => v !== null)
+                    }))
+                };
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(formattedData));
+            })
+            .catch(err => {
+                console.error('DB Error (history):', err.message);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(historicalData));
+            });
         return;
     }
 
@@ -220,55 +263,16 @@ function broadcastToClients(data) {
 }
 
 // Aggregiere tägliche Daten
-function aggregateDailyData() {
+async function aggregateDailyData() {
     const today = new Date().toISOString().split('T')[0];
     
-    // Flugdaten aktualisieren
-    let todayFlights = historicalData.flights.find(d => d.date === today);
-    if (!todayFlights) {
-        todayFlights = { date: today, einflug: 0, ausflug: 0, total: 0 };
-        historicalData.flights.push(todayFlights);
+    try {
+        // Calculate stats from database
+        await db.calculateDailyStats(today);
+        console.log(`[${new Date().toLocaleTimeString()}] Tägliche Daten in DB aggregiert`);
+    } catch (err) {
+        console.error('Fehler bei Aggregierung:', err.message);
     }
-    todayFlights.einflug = trackingData.einflug;
-    todayFlights.ausflug = trackingData.ausflug;
-    todayFlights.total = trackingData.einflug + trackingData.ausflug;
-    
-    // Nur letzte 7 Tage behalten
-    if (historicalData.flights.length > 7) {
-        historicalData.flights = historicalData.flights.slice(-7);
-    }
-    
-    // Temperaturdaten aktualisieren
-    if (sensorData.temperature !== null) {
-        let todayTemp = historicalData.temperature.find(d => d.date === today);
-        if (!todayTemp) {
-            todayTemp = { date: today, values: [], avg: 0 };
-            historicalData.temperature.push(todayTemp);
-        }
-        todayTemp.values.push(sensorData.temperature);
-        todayTemp.avg = todayTemp.values.reduce((a, b) => a + b, 0) / todayTemp.values.length;
-        
-        if (historicalData.temperature.length > 7) {
-            historicalData.temperature = historicalData.temperature.slice(-7);
-        }
-    }
-    
-    // Feuchtigkeitsdaten aktualisieren
-    if (sensorData.humidity !== null) {
-        let todayHum = historicalData.humidity.find(d => d.date === today);
-        if (!todayHum) {
-            todayHum = { date: today, values: [], avg: 0 };
-            historicalData.humidity.push(todayHum);
-        }
-        todayHum.values.push(sensorData.humidity);
-        todayHum.avg = todayHum.values.reduce((a, b) => a + b, 0) / todayHum.values.length;
-        
-        if (historicalData.humidity.length > 7) {
-            historicalData.humidity = historicalData.humidity.slice(-7);
-        }
-    }
-    
-    console.log(`[${new Date().toLocaleTimeString()}] Tägliche Daten aggregiert`);
 }
 
 // Aggregiere Daten alle 10 Minuten

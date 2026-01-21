@@ -7,8 +7,103 @@
 - ✅ Dashboard files uploaded to `/home/ubuntu/beesense`
 - ✅ Server running on port 8080
 - ✅ Security group configured (port 8080 open)
+- ✅ SQLite database integrated for persistent storage
 
 **Your Dashboard:** http://3.75.94.127:8080
+
+---
+
+## Deploying Database Updates
+
+### Automated Deployment (Recommended)
+
+**From your Windows machine:**
+```powershell
+cd dashboard
+.\deploy-aws.ps1
+```
+
+This script will:
+1. Stop the running server
+2. Backup the existing database
+3. Upload updated files
+4. Install npm dependencies (including sqlite3)
+5. Restart the server with PM2
+
+### Manual Deployment
+
+If the automated script doesn't work, deploy manually:
+
+```powershell
+# 1. Connect to AWS
+ssh ubuntu@3.75.94.127
+
+# 2. Stop server
+pm2 stop beesense
+
+# 3. Backup database (optional but recommended)
+cd ~/beesense
+cp beesense.db beesense.db.backup
+
+# 4. Upload files from your local machine (in a new terminal)
+scp dashboard/server.js ubuntu@3.75.94.127:~/beesense/
+scp dashboard/database.js ubuntu@3.75.94.127:~/beesense/
+scp dashboard/package.json ubuntu@3.75.94.127:~/beesense/
+
+# 5. Back in SSH, install dependencies
+cd ~/beesense
+npm install
+
+# 6. Restart server
+pm2 restart beesense
+pm2 save
+```
+
+---
+
+## Database Features
+
+### What's Stored
+
+The SQLite database stores:
+- **Sensor Data**: Temperature and humidity readings with timestamps
+- **Bee Detections**: Individual bee entry/exit events
+- **Daily Statistics**: Aggregated daily flight counts and sensor averages
+- **System Logs**: Server logs for debugging
+
+### Database File
+
+**Location:** `/home/ubuntu/beesense/beesense.db`
+**Type:** SQLite3
+**Automatic Backups:** Created before each deployment
+
+### Querying the Database
+
+You can query the database directly on AWS:
+
+```bash
+ssh ubuntu@3.75.94.127
+cd ~/beesense
+sqlite3 beesense.db
+
+# Example queries:
+.tables                          # Show all tables
+SELECT * FROM daily_stats;       # View daily statistics
+SELECT * FROM bee_detections ORDER BY timestamp DESC LIMIT 10;
+SELECT COUNT(*) FROM sensor_data;
+.quit
+```
+
+### API Endpoints with Database
+
+- `GET /api/history?days=7` - Get historical data (from database)
+- `GET /api/tracking` - Current tracking data
+- `GET /api/sensors` - Current sensor data
+
+Example:
+```powershell
+curl http://3.75.94.127:8080/api/history?days=30
+```
 
 ---
 
@@ -129,6 +224,8 @@ Dashboard should update immediately!
 ### AWS Server
 - **Location:** `/home/ubuntu/beesense/`
 - **Main file:** `server.js`
+- **Database:** `beesense.db` (SQLite)
+- **Database module:** `database.js`
 - **Port:** 8080
 - **Process manager:** PM2
 
@@ -157,6 +254,19 @@ Dashboard should update immediately!
 1. Check ESP32 serial monitor for "Daten erfolgreich gesendet"
 2. Check AWS server logs: `pm2 logs beesense`
 3. Test API manually (see Test 4 above)
+
+### Database issues
+1. Check database file exists: `ssh ubuntu@3.75.94.127 "ls -lh ~/beesense/beesense.db"`
+2. View recent logs: `pm2 logs beesense --lines 50`
+3. Restore from backup if needed: `cp beesense.db.backup beesense.db`
+
+### View database contents
+```bash
+ssh ubuntu@3.75.94.127
+cd ~/beesense
+sqlite3 beesense.db "SELECT COUNT(*) as total_detections FROM bee_detections;"
+sqlite3 beesense.db "SELECT * FROM daily_stats ORDER BY date DESC LIMIT 7;"
+```
 
 ---
 
