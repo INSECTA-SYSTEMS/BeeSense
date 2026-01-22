@@ -28,6 +28,27 @@ static constexpr const char *MOUNT_POINT = "/sdcard";
 static sdmmc_card_t *g_card = nullptr;
 static bool g_mounted = false;
 
+// Generate timestamp-based filename
+static std::string generate_timestamp_filename(const char *dir_path, const char *prefix, const char *extension) {
+    time_t now;
+    time(&now);
+    struct tm *timeinfo = localtime(&now);
+    
+    char filename[256];
+    snprintf(filename, sizeof(filename), "%s/%s_%04d%02d%02d_%02d%02d%02d.%s",
+             dir_path,
+             prefix,
+             timeinfo->tm_year + 1900,
+             timeinfo->tm_mon + 1,
+             timeinfo->tm_mday,
+             timeinfo->tm_hour,
+             timeinfo->tm_min,
+             timeinfo->tm_sec,
+             extension);
+    
+    return std::string(filename);
+}
+
 // --------- Internal helpers ----------------------------------
 
 static void init_sd_enable_pin(void) {
@@ -272,28 +293,19 @@ bool save_detected_jpeg(const dl::image::img_t &img,
         return false;
     }
 
-    // Determine next index in directory
-    int idx = count_files(dir_full_path);
-    if (idx < 0) {
-        free(jpeg_img.data);
-        return false;
-    }
+    // Generate timestamp-based filename
+    std::string filepath = generate_timestamp_filename(dir_full_path, "bumblebee", "jpg");
 
+    ESP_LOGI(TAG, "Saving detected JPEG: %s", filepath.c_str());
 
-    char filepath[256];
-    std::snprintf(filepath, sizeof(filepath), "%s/bumblebee_%04d.jpg", dir_full_path, idx + 1);
-
-    ESP_LOGI(TAG, "Saving detected JPEG: %s", filepath);
-
-    esp_err_t write_err = dl::image::write_jpeg(jpeg_img, filepath);
+    esp_err_t write_err = dl::image::write_jpeg(jpeg_img, filepath.c_str());
     if (write_err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to save JPEG: %s", filepath);
+        ESP_LOGE(TAG, "Failed to save JPEG: %s", filepath.c_str());
         free(jpeg_img.data);
         return false;
     }
 
-    // Änderungsdatum setzen (aktuelles Systemdatum/Zeit) via FATFS
-    // Nur möglich, wenn FF_USE_CHMOD und FF_FS_NORTC == 0 in FATFS Konfiguration
+    // Set file timestamp via FATFS if available
     struct tm *tm_now;
     time_t t = time(NULL);
     tm_now = localtime(&t);
@@ -302,19 +314,24 @@ bool save_detected_jpeg(const dl::image::img_t &img,
         finfo.fdate = ((tm_now->tm_year - 80) << 9) | ((tm_now->tm_mon + 1) << 5) | tm_now->tm_mday;
         finfo.ftime = (tm_now->tm_hour << 11) | (tm_now->tm_min << 5) | (tm_now->tm_sec / 2);
 #ifdef f_utime
-        if (f_utime(filepath, &finfo) != 0) {
-            ESP_LOGW(TAG, "Could not set FATFS file time: %s", filepath);
+        if (f_utime(filepath.c_str(), &finfo) != 0) {
+            ESP_LOGW(TAG, "Could not set FATFS file time: %s", filepath.c_str());
         }
 #else
-        ESP_LOGW(TAG, "f_utime nicht verfügbar, Änderungsdatum kann nicht gesetzt werden: %s", filepath);
+        ESP_LOGW(TAG, "f_utime not available, file timestamp cannot be set: %s", filepath.c_str());
 #endif
     } else {
-        ESP_LOGW(TAG, "Could not get localtime for file time: %s", filepath);
+        ESP_LOGW(TAG, "Could not get localtime for file time: %s", filepath.c_str());
     }
 
     ESP_LOGI(TAG, "Saved successfully");
     free(jpeg_img.data);
     return true;
+}
+
+// Public wrapper to generate timestamp filenames
+std::string get_timestamp_filename(const char *dir_path, const char *prefix, const char *extension) {
+    return generate_timestamp_filename(dir_path, prefix, extension);
 }
 
 } // namespace sdcard
