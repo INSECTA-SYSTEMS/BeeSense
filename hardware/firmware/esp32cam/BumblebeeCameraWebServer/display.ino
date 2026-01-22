@@ -4,7 +4,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_HDC1000.h>
-#include <Adafruit_VEML6070.h>
+#include <Adafruit_LTR329_LTR303.h> // Correct Adafruit library
+#include <Adafruit_VEML6070.h>     // Correct Adafruit library
 
 #define PIN_QWIIC_SDA 2
 #define PIN_QWIIC_SCL 1
@@ -15,6 +16,7 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_HDC1000 hdc = Adafruit_HDC1000();
+Adafruit_LTR329 ltr = Adafruit_LTR329();
 Adafruit_VEML6070 uv = Adafruit_VEML6070();
 
 void displaySensorData() {
@@ -23,6 +25,12 @@ void displaySensorData() {
   // Read sensor data
   float temp = hdc.readTemperature();
   float humi = hdc.readHumidity();
+  
+  // Read Light (LTR329)
+  uint16_t visible_plus_ir, ir;
+  bool lightValid = ltr.readBothChannels(visible_plus_ir, ir);
+  unsigned int lightLevel = visible_plus_ir; 
+
   uint16_t uvLevel = uv.readUV();
   float uvIndex = uvLevel / 100.0;
   
@@ -56,28 +64,18 @@ void displaySensorData() {
   // Draw separator line
   display.drawLine(0, 42, SCREEN_WIDTH, 42, WHITE);
   
-// Display UV raw value
-display.setTextSize(1);
-display.setCursor(0, 46);
-display.print("UV: ");
-display.print(uvLevel);
+  // Display Lux and UV
+  display.setTextSize(1);
+  display.setCursor(0, 46);
+  display.print("Lux: ");
+  display.print(lightLevel);
 
-// Display UV Index and level indicator
-display.setCursor(0, 56);
-display.print("Idx:");
-display.print(uvIndex, 1);
-display.print(" ");
-if (uvIndex < 3) {
-    display.print("Low");
-} else if (uvIndex < 6) {
-    display.print("Mod");
-} else if (uvIndex < 8) {
-    display.print("High");
-} else if (uvIndex < 11) {
-    display.print("V.High");
-} else {
-    display.print("Extr");
-}
+  // Display UV Index and level
+  display.setCursor(0, 56);
+  display.print("UV: ");
+  display.print(uvLevel);
+  display.print(" I:");
+  display.print(uvIndex, 1);
   
   display.display();
 }
@@ -96,8 +94,12 @@ void setup() {
   // Initialize HDC1000 sensor
   hdc.begin();
   
-  // Initialize VEML6070 UV sensor
-  uv.begin(VEML6070_4_T);
+  // Initialize Light and UV sensors
+  if (!ltr.begin()) {
+    Serial.println("Couldn't find LTR sensor!");
+  }
+  
+  uv.begin(VEML6070_1_T);
   
   // Show startup message
   display.setTextSize(1);
@@ -119,6 +121,12 @@ void loop() {
   // Also print to Serial for debugging
   float temp = hdc.readTemperature();
   float humi = hdc.readHumidity();
+  
+  // Read Light (LTR329)
+  uint16_t visible_plus_ir, ir;
+  bool lightValid = ltr.readBothChannels(visible_plus_ir, ir);
+  unsigned int lightLevel = visible_plus_ir; 
+
   uint16_t uvLevel = uv.readUV();
   float uvIndex = uvLevel / 100.0;
   
@@ -126,7 +134,9 @@ void loop() {
   Serial.print(temp, 1);
   Serial.print("°C | Hum: ");
   Serial.print(humi, 1);
-  Serial.print("% | UV: ");
+  Serial.print("% | Light: ");
+  Serial.print(lightLevel);
+  Serial.print(" | UV: ");
   Serial.print(uvLevel);
   Serial.print(" (Index: ");
   Serial.print(uvIndex, 1);
