@@ -75,15 +75,55 @@ Das Dashboard wird später:
 2. Daten über eine **REST-API oder WebSocket** vom ESP32 beziehen  
 3. historische Daten aus dem Firmware-Speicher (Flash / SD-Karte) oder dem Backend laden  
 
-### Geplant:
+### ✅ Implementiert (AWS Server: http://3.75.94.127:8080):
 
-- `/api/flights/today`
-- `/api/flights/history`  
-- `/api/temperature/current`
-- `/api/temperature/history`
-- `/api/humidity/current`
-- `/api/humidity/history`
-- `/api/location`
+#### GET Endpoints (Daten abrufen)
+- `/api/data` - Alle aktuellen Daten (Tracking + Sensoren)
+- `/api/tracking` - Aktuelle Flugdaten (einflug/ausflug)
+- `/api/sensors` - Aktuelle Sensordaten (Temperatur/Feuchtigkeit)
+- `/api/history?days=7` - Historische Daten aus Datenbank
+
+#### POST Endpoints (Daten senden)
+- `/api/tracking` - Tracking-Daten vom ESP32 empfangen
+- `/api/sensors` - Sensor-Daten empfangen (Temperatur/Feuchtigkeit)
+
+### Beispiele für Sensor-Anbindung
+
+#### ESP32/Arduino mit Sensor (z.B. DHT22, BME280):
+```cpp
+// HTTP POST request to send sensor data
+String serverUrl = "http://3.75.94.127:8080/api/sensors";
+String jsonData = "{\"temperature\":" + String(temp) + 
+                  ",\"humidity\":" + String(humid) + 
+                  ",\"timestamp\":" + String(millis()) + "}";
+
+http.begin(serverUrl);
+http.addHeader("Content-Type", "application/json");
+int httpCode = http.POST(jsonData);
+```
+
+#### Python/Raspberry Pi mit Sensor:
+```python
+import requests
+import time
+
+# Send sensor data
+data = {
+    "temperature": 23.5,
+    "humidity": 65.2,
+    "timestamp": int(time.time() * 1000)
+}
+response = requests.post(
+    "http://3.75.94.127:8080/api/sensors",
+    json=data
+)
+```
+
+#### PowerShell Test (Windows):
+```powershell
+$body = '{"temperature":23.5,"humidity":65.2,"timestamp":1704900000000}'
+Invoke-RestMethod -Uri "http://3.75.94.127:8080/api/sensors" -Method Post -Body $body -ContentType "application/json"
+```
 
 ---
 

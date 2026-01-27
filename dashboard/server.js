@@ -10,12 +10,12 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const BeeSenseDatabase = require('./database');
+const { createDatabase } = require('./database-config');
 
 const PORT = 8080;
 
 // Initialize database
-const db = new BeeSenseDatabase();
+const db = createDatabase();
 
 // Aktuelle Tracking-Daten
 let trackingData = {
