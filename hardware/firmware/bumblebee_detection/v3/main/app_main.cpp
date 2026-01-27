@@ -21,12 +21,48 @@
 // WiFi Support
 #include "include/wifi_manager.h"
 
+// Time support for timestamp
+#include "esp_sntp.h"
+#include <time.h>
+
 // Intervall für das Senden der Daten ans Dashboard (in Millisekunden)
 #define WIFI_SEND_INTERVAL_MS 10000
 
 extern const uint8_t bumblebee_jpg_start[] asm("_binary_bumblebee_jpg_start");
 extern const uint8_t bumblebee_jpg_end[] asm("_binary_bumblebee_jpg_end");
 const char *TAG = "bumblebee_detect";
+
+// Get current time from NTP and set timezone
+static void obtain_time(void)
+{
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_init();
+
+    time_t now = 0;
+    struct tm timeinfo = { 0 };
+    int retry = 0;
+
+    while (timeinfo.tm_year < (2016 - 1900) && ++retry < 20) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        time(&now);
+        localtime_r(&now, &timeinfo);
+    }
+    // Set timezone for Germany (CET/CEST)
+    setenv("TZ", "CET-1CEST,M3.5.0/2,M10.5.0/3", 1);
+    tzset();
+    
+    ESP_LOGI(TAG, "Time synchronized. Current epoch=%lld", (long long)now);
+}
+
+// Periodically re-synchronize time with NTP
+static void time_sync_task(void *pvParameters) {
+    for(;;) {
+        vTaskDelay(pdMS_TO_TICKS(1200000)); // Re-sync every 20 minutes
+        obtain_time();
+        ESP_LOGI(TAG, "Time re-synchronized");
+    }
+}
 
 // Camera Module pin mapping
 static camera_config_t camera_config = {
@@ -155,6 +191,10 @@ extern "C" void app_main(void)
     } else {
         ESP_LOGW(TAG, "WiFi-Initialisierung fehlgeschlagen: %s", esp_err_to_name(wifi_err));
     }
+
+    // Initialize time from NTP
+    ESP_LOGI(TAG, "Synchronizing time with NTP...");
+    obtain_time();
 
     ESP_LOGI("SD", "Mounting SD card...");
     bool mounted = sdcard::init();
@@ -287,4 +327,7 @@ extern "C" void app_main(void)
     #if CONFIG_BUMBLEBEE_DETECT_MODEL_IN_SDCARD
         ESP_ERROR_CHECK(bsp_sdcard_unmount());
     #endif
+
+    // Start time sync task to periodically update time from NTP
+    xTaskCreate(time_sync_task, "time_sync", 4096, NULL, 5, NULL);
 }
