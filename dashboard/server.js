@@ -33,6 +33,34 @@ let sensorData = {
     lastUpdate: null
 };
 
+// Load today's stats from database on startup
+async function loadTodayStats() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const stats = await db.getDailyStats(today, today);
+        if (stats && stats.length > 0) {
+            trackingData.einflug = stats[0].einflug_count || 0;
+            trackingData.ausflug = stats[0].ausflug_count || 0;
+            trackingData.lastUpdate = new Date().toISOString();
+            console.log(`📊 Heute geladen: ${trackingData.einflug} Einflüge, ${trackingData.ausflug} Ausflüge`);
+        }
+        
+        // Also load latest sensor data
+        const latestSensor = await db.getLatestSensorData();
+        if (latestSensor) {
+            sensorData.temperature = latestSensor.temperature;
+            sensorData.humidity = latestSensor.humidity;
+            sensorData.lastUpdate = new Date().toISOString();
+            console.log(`🌡️ Sensoren geladen: ${sensorData.temperature}°C, ${sensorData.humidity}%`);
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden der Tagesdaten:', err.message);
+    }
+}
+
+// Call after a short delay to ensure DB is ready
+setTimeout(loadTodayStats, 1000);
+
 // Server-Sent Events Clients (für Live-Updates)
 const sseClients = new Set();
 
@@ -196,8 +224,45 @@ const server = http.createServer((req, res) => {
             .catch(err => {
                 console.error('DB Error (history):', err.message);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(historicalData));
+                res.end(JSON.stringify({ flights: [], temperature: [], humidity: [] }));
             });
+        return;
+    }
+
+    // API: Hourly history data (for heatmap & hourly chart)
+    if (url.pathname === '/api/history/hourly' && req.method === 'GET') {
+        const days = parseInt(url.searchParams.get('days')) || 7;
+        const startTime = Date.now() - days * 24 * 60 * 60 * 1000;
+
+        const query = `
+            SELECT 
+                strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch', 'localtime')) as date,
+                CAST(strftime('%H', datetime(timestamp/1000, 'unixepoch', 'localtime')) AS INTEGER) as hour,
+                COUNT(*) as count,
+                SUM(CASE WHEN direction = 'einflug' THEN 1 ELSE 0 END) as einflug,
+                SUM(CASE WHEN direction = 'ausflug' THEN 1 ELSE 0 END) as ausflug
+            FROM bee_detections
+            WHERE timestamp >= ?
+            GROUP BY date, hour
+            ORDER BY date ASC, hour ASC
+        `;
+
+        try {
+            db.db.all(query, [startTime], (err, rows) => {
+                if (err) {
+                    console.error('DB Error (hourly):', err.message);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify([]));
+                    return;
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(rows || []));
+            });
+        } catch (e) {
+            console.error('Hourly API error:', e.message);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify([]));
+        }
         return;
     }
 
