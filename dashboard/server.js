@@ -44,7 +44,7 @@ async function loadTodayStats() {
             trackingData.lastUpdate = new Date().toISOString();
             console.log(`📊 Heute geladen: ${trackingData.einflug} Einflüge, ${trackingData.ausflug} Ausflüge`);
         }
-        
+
         // Also load latest sensor data
         const latestSensor = await db.getLatestSensorData();
         if (latestSensor) {
@@ -57,9 +57,6 @@ async function loadTodayStats() {
         console.error('Fehler beim Laden der Tagesdaten:', err.message);
     }
 }
-
-// Call after a short delay to ensure DB is ready
-setTimeout(loadTodayStats, 1000);
 
 // Server-Sent Events Clients (für Live-Updates)
 const sseClients = new Set();
@@ -310,7 +307,13 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        res.writeHead(200, { 'Content-Type': contentType });
+        // Add cache-control headers to prevent caching
+        res.writeHead(200, { 
+            'Content-Type': contentType,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
         res.end(data);
     });
 });
@@ -343,20 +346,27 @@ async function aggregateDailyData() {
 // Aggregiere Daten alle 10 Minuten
 setInterval(aggregateDailyData, 10 * 60 * 1000);
 
-// Initial aggregieren
-aggregateDailyData();
+// Start server only after loading today's data from DB
+async function startServer() {
+    // Wait briefly for DB tables to initialize
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Load today's data before accepting connections
+    await aggregateDailyData();
+    await loadTodayStats();
 
-// Server starten
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('🐝 BeeSense Dashboard Server gestartet');
-    console.log('=====================================');
-    console.log(`📊 Dashboard:        http://localhost:${PORT}`);
-    console.log(`📡 Tracking API:     http://localhost:${PORT}/api/tracking`);
-    console.log(`🌡️  Sensor API:       http://localhost:${PORT}/api/sensors`);
-    console.log(`📋 All Data API:     http://localhost:${PORT}/api/data`);
-    console.log(`🔴 Live Events:      http://localhost:${PORT}/api/events`);
-    console.log('');
-    console.log('Warte auf Daten vom ESP32 und Sensoren...');
-    console.log('');
-});
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log('');
+        console.log('🐝 BeeSense Dashboard Server gestartet');
+        console.log('=====================================');
+        console.log(`📊 Dashboard:        http://localhost:${PORT}`);
+        console.log(`📡 Tracking API:     http://localhost:${PORT}/api/tracking`);
+        console.log(`🌡️  Sensor API:       http://localhost:${PORT}/api/sensors`);
+        console.log(`📋 All Data API:     http://localhost:${PORT}/api/data`);
+        console.log(`🔴 Live Events:      http://localhost:${PORT}/api/events`);
+        console.log('');
+        console.log('Warte auf Daten vom ESP32 und Sensoren...');
+        console.log('');
+    });
+}
+
+startServer();

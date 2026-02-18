@@ -382,7 +382,14 @@
     }
 
     const savedTheme = localStorage.getItem("beeTheme") || "light";
-    applyTheme(savedTheme);
+    // Apply theme without updating charts yet (charts not initialized)
+    if (savedTheme === "dark") {
+      document.body.classList.add("theme-dark");
+      if (themeToggleBtn) themeToggleBtn.textContent = "☀️ Helles Design";
+    } else {
+      document.body.classList.remove("theme-dark");
+      if (themeToggleBtn) themeToggleBtn.textContent = "🌙 Dunkles Design";
+    }
 
     if (themeToggleBtn) {
       themeToggleBtn.addEventListener("click", () => {
@@ -644,6 +651,9 @@
 
     updateChartsWithHistoricalData();
     setInterval(updateChartsWithHistoricalData, 30000);
+
+    // Apply full theme (including chart colors) now that charts are initialized
+    applyTheme(savedTheme);
 
     // ═══ DATE RANGE CONTROLS ═══
     (function initDateControls() {
