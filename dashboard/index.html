@@ -22,12 +22,12 @@
 
   <!-- ═══ HEADER ═══ -->
   <div class="header">
-    <div class="header-left">
-      <h1>🐝 BeeSense</h1>
-      <div class="subtitle">Dein smarter Bienenstock</div>
-    </div>
-    <div class="header-logo">
-      <img src="assets/LogoBiene.png" alt="BeeSense Logo">
+    <div class="header-brand">
+      <img src="assets/LogoBiene.png" alt="BeeSense" class="brand-logo">
+      <div>
+        <h1>BeeSense</h1>
+        <div class="subtitle">Dein smarter Bienenstock</div>
+      </div>
     </div>
   </div>
 
@@ -37,6 +37,7 @@
     <button class="nav-btn" data-view="flights">Flüge</button>
     <button class="nav-btn" data-view="temperature">Temperatur</button>
     <button class="nav-btn" data-view="humidity">Feuchtigkeit</button>
+    <button class="nav-btn" data-view="sensors">Sensoren</button>
     <button class="nav-btn" data-view="location">Standort</button>
     <button class="nav-btn" data-view="settings">Einstellungen</button>
   </div>
@@ -47,7 +48,8 @@
   <div id="view-overview" class="view active">
 
     <!-- Top metrics -->
-    <div class="grid">
+    <div class="section-label">Flugaktivität</div>
+    <div class="grid grid-flights">
       <div class="card card-flight">
         <h2>Einflüge</h2>
         <div class="value-row">
@@ -74,7 +76,10 @@
         </div>
         <div class="small" id="flights-info">Einflüge + Ausflüge</div>
       </div>
+    </div>
 
+    <div class="section-label">Messwerte</div>
+    <div class="grid grid-sensors">
       <div class="card card-temp">
         <h2>Temperatur</h2>
         <div class="value-row">
@@ -91,6 +96,33 @@
           <div class="unit">%</div>
         </div>
         <div class="small" id="hum-status">–</div>
+      </div>
+
+      <div class="card card-water">
+        <h2>Stocktemp.</h2>
+        <div class="value-row">
+          <div id="water-temperature" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small" id="water-status">–</div>
+      </div>
+
+      <div class="card card-light">
+        <h2>Lichtstärke</h2>
+        <div class="value-row">
+          <div id="lux" class="value">--</div>
+          <div class="unit">lx</div>
+        </div>
+        <div class="small" id="lux-status">–</div>
+      </div>
+
+      <div class="card card-uv">
+        <h2>UV-Intensität</h2>
+        <div class="value-row">
+          <div id="uv" class="value">--</div>
+          <div class="unit">UV</div>
+        </div>
+        <div class="small" id="uv-status">–</div>
       </div>
     </div>
 
@@ -283,6 +315,52 @@
   </div>
 
   <!-- ═══════════════════════════════════════════
+       VIEW: SENSOREN
+       ═══════════════════════════════════════════ -->
+  <div id="view-sensors" class="view">
+    <div class="grid" style="margin-bottom:16px;">
+      <div class="card card-water">
+        <h2>Stocktemperatur (DS18B20)</h2>
+        <div class="value-row">
+          <div id="water-temperature-detail" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small" id="water-status-detail">Innentemperatur Stock</div>
+      </div>
+      <div class="card card-light">
+        <h2>Lichtstärke (LTR329)</h2>
+        <div class="value-row">
+          <div id="lux-detail" class="value">--</div>
+          <div class="unit">lx</div>
+        </div>
+        <div class="small" id="lux-status-detail">Umgebungslicht</div>
+      </div>
+      <div class="card card-uv">
+        <h2>UV-Intensität (VEML6070)</h2>
+        <div class="value-row">
+          <div id="uv-detail" class="value">--</div>
+          <div class="unit">UV</div>
+        </div>
+        <div class="small" id="uv-status-detail">Ultraviolett</div>
+      </div>
+    </div>
+    <div class="flights-layout">
+      <div class="card card-water">
+        <h2>Stocktemperatur-Verlauf</h2>
+        <div class="chart-container">
+          <canvas id="waterTempChart"></canvas>
+        </div>
+      </div>
+      <div class="card card-light">
+        <h2>Licht &amp; UV-Verlauf</h2>
+        <div class="chart-container">
+          <canvas id="luxUvChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
        VIEW: STANDORT
        ═══════════════════════════════════════════ -->
   <div id="view-location" class="view">
@@ -299,10 +377,10 @@
               <input type="text" id="input-name" placeholder="z.B. Bienenstock1" maxlength="30" />
             </label>
             <label>Breite (Lat):<br/>
-              <input type="number" step="0.0001" id="input-lat" placeholder="z.B. 52.5200" />
+              <input type="number" step="0.0001" id="input-lat" placeholder="z.B. 51.9607" />
             </label>
             <label>Länge (Lng):<br/>
-              <input type="number" step="0.0001" id="input-lng" placeholder="z.B. 13.4050" />
+              <input type="number" step="0.0001" id="input-lng" placeholder="z.B. 7.6261" />
             </label>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button id="btn-save-stock" type="button">Speichern</button>
@@ -347,6 +425,7 @@
       flights:     document.getElementById("view-flights"),
       temperature: document.getElementById("view-temperature"),
       humidity:    document.getElementById("view-humidity"),
+      sensors:     document.getElementById("view-sensors"),
       location:    document.getElementById("view-location"),
       settings:    document.getElementById("view-settings"),
     };
@@ -410,18 +489,29 @@
         orangeBg: isDark ? 'rgba(251,146,60,0.15)' : 'rgba(249,115,22,0.12)',
         cyan:     isDark ? '#22d3ee' : '#06b6d4',
         cyanBg:   isDark ? 'rgba(34,211,238,0.15)' : 'rgba(6,182,212,0.12)',
+        sky:      '#0ea5e9',
+        skyBg:    'rgba(14,165,233,0.12)',
+        amber:    '#f59e0b',
+        amberBg:  'rgba(245,158,11,0.12)',
+        violet:   '#8b5cf6',
+        violetBg: 'rgba(139,92,246,0.12)',
       };
     }
 
     function updateChartTheme() {
       const cc = getChartColors();
-      [flightsChart, tempChart, humChart].forEach(chart => {
+      [flightsChart, tempChart, humChart, waterTempChart].forEach(chart => {
         if (!chart) return;
         chart.options.scales.x.ticks.color = cc.text;
         chart.options.scales.y.ticks.color = cc.text;
         chart.options.scales.x.grid.color = cc.grid;
         chart.options.scales.y.grid.color = cc.grid;
       });
+      if (luxUvChart) {
+        luxUvChart.options.scales.x.ticks.color = cc.text;
+        luxUvChart.options.scales.x.grid.color  = cc.grid;
+        luxUvChart.options.scales.yLux.grid.color = cc.grid;
+      }
       if (flightsChart) {
         flightsChart.data.datasets[0].backgroundColor = cc.honeyBg;
         flightsChart.data.datasets[0].borderColor = cc.honey;
@@ -600,6 +690,98 @@
         }],
       },
       options: defaultChartOptions({ beginAtZero: false, suggestedMin: 30, suggestedMax: 90 }),
+    });
+
+    // Sensor history (rolling 60 readings)
+    const MAX_SENSOR_READINGS = 60;
+    let sensorReadingLabels = [];
+    let sensorReadingWater  = [];
+    let sensorReadingLux    = [];
+    let sensorReadingUv     = [];
+
+    function pushSensorReading(waterTemp, lux, uv) {
+      if (waterTemp === null && lux === null && uv === null) return;
+      const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      sensorReadingLabels.push(now);
+      sensorReadingWater.push(waterTemp != null ? waterTemp : null);
+      sensorReadingLux.push(lux   != null ? lux   : null);
+      sensorReadingUv.push(uv    != null ? uv    : null);
+      if (sensorReadingLabels.length > MAX_SENSOR_READINGS) {
+        sensorReadingLabels.shift(); sensorReadingWater.shift();
+        sensorReadingLux.shift();    sensorReadingUv.shift();
+      }
+      if (waterTempChart) {
+        waterTempChart.data.labels = sensorReadingLabels;
+        waterTempChart.data.datasets[0].data = sensorReadingWater;
+        waterTempChart.update('none');
+      }
+      if (luxUvChart) {
+        luxUvChart.data.labels = sensorReadingLabels;
+        luxUvChart.data.datasets[0].data = sensorReadingLux;
+        luxUvChart.data.datasets[1].data = sensorReadingUv;
+        luxUvChart.update('none');
+      }
+    }
+
+    // Water temperature chart
+    const ctxWaterTemp = document.getElementById('waterTempChart').getContext('2d');
+    const waterTempChart = new Chart(ctxWaterTemp, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Stocktemp. (°C)',
+          data: [],
+          borderColor: '#0ea5e9',
+          backgroundColor: 'rgba(14,165,233,0.12)',
+          tension: 0.4, fill: true,
+          pointRadius: 3, pointHoverRadius: 5,
+          borderWidth: 2, spanGaps: true,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8 } },
+        scales: {
+          y: { ticks: { color: cc.text }, grid: { color: cc.grid }, beginAtZero: false },
+          x: { ticks: { color: cc.text, maxTicksLimit: 8 }, grid: { display: false } },
+        },
+      },
+    });
+
+    // Lux + UV combined chart
+    const ctxLuxUv = document.getElementById('luxUvChart').getContext('2d');
+    const luxUvChart = new Chart(ctxLuxUv, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Lux',
+            data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)',
+            tension: 0.4, fill: false, pointRadius: 3, borderWidth: 2,
+            yAxisID: 'yLux', spanGaps: true,
+          },
+          {
+            label: 'UV',
+            data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)',
+            tension: 0.4, fill: false, pointRadius: 3, borderWidth: 2,
+            yAxisID: 'yUv', spanGaps: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { display: true, labels: { color: cc.text, font: { family: "'Inter', sans-serif", size: 11 }, boxWidth: 12 } },
+          tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8 },
+        },
+        scales: {
+          yLux: { type: 'linear', position: 'left',  ticks: { color: '#f59e0b' }, grid: { color: cc.grid }, beginAtZero: true, title: { display: true, text: 'Lux', color: '#f59e0b', font: { size: 11 } } },
+          yUv:  { type: 'linear', position: 'right', ticks: { color: '#8b5cf6' }, grid: { display: false }, beginAtZero: true, title: { display: true, text: 'UV', color: '#8b5cf6', font: { size: 11 } } },
+          x: { ticks: { color: cc.text, maxTicksLimit: 8 }, grid: { display: false } },
+        },
+      },
     });
 
     // ═══ HISTORICAL DATA ═══
@@ -837,8 +1019,8 @@
     function clearAllStocks() { localStorage.removeItem(STOCKS_KEY); }
 
     const initialStocks = loadStocks();
-    let currentLat = initialStocks[0]?.lat ?? 52.5200;
-    let currentLng = initialStocks[0]?.lng ?? 13.4050;
+    let currentLat = initialStocks[0]?.lat ?? 51.9607;
+    let currentLng = initialStocks[0]?.lng ?? 7.6261;
 
     map = L.map("map").setView([currentLat, currentLng], 13);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -1010,8 +1192,11 @@
 
     // ═══ SENSOR DATA ═══
     function updateSensorData(sensorData) {
-      const temp = sensorData.temperature;
-      const hum  = sensorData.humidity;
+      const temp      = sensorData.temperature;
+      const hum       = sensorData.humidity;
+      const waterTemp = sensorData.waterTemperature;
+      const luxVal    = sensorData.lux;
+      const uvVal     = sensorData.uv;
 
       if (temp !== null && temp !== undefined) {
         currentTemp = temp;
@@ -1051,6 +1236,57 @@
           humStatusDetail.className = humStatus.className;
         }
       }
+
+      if (waterTemp !== null && waterTemp !== undefined) {
+        const wt = parseFloat(waterTemp).toFixed(1);
+        document.getElementById("water-temperature").innerText = wt;
+        const wtDetail = document.getElementById("water-temperature-detail");
+        if (wtDetail) wtDetail.innerText = wt;
+        const waterStatus = document.getElementById("water-status");
+        const waterStatusDetail = document.getElementById("water-status-detail");
+        const wtMsg = (waterTemp >= 10 && waterTemp <= 35)
+          ? { text: "Im normalen Bereich", cls: "small status-ok" }
+          : { text: "Außerhalb Normalbereich", cls: "small status-warn" };
+        if (waterStatus) { waterStatus.innerText = wtMsg.text; waterStatus.className = wtMsg.cls; }
+        if (waterStatusDetail) { waterStatusDetail.innerText = wtMsg.text; waterStatusDetail.className = wtMsg.cls; }
+      }
+
+      if (luxVal !== null && luxVal !== undefined) {
+        const lx = Math.round(luxVal);
+        document.getElementById("lux").innerText = lx;
+        const luxDetail = document.getElementById("lux-detail");
+        if (luxDetail) luxDetail.innerText = lx;
+        const luxStatus = document.getElementById("lux-status");
+        const luxStatusDetail = document.getElementById("lux-status-detail");
+        const luxMsg = luxVal < 50
+          ? { text: "Dunkel", cls: "small" }
+          : luxVal < 500
+            ? { text: "Normales Tageslicht", cls: "small status-ok" }
+            : { text: "Hell / Sonnenlicht", cls: "small status-ok" };
+        if (luxStatus) { luxStatus.innerText = luxMsg.text; luxStatus.className = luxMsg.cls; }
+        if (luxStatusDetail) { luxStatusDetail.innerText = luxMsg.text; luxStatusDetail.className = luxMsg.cls; }
+      }
+
+      if (uvVal !== null && uvVal !== undefined) {
+        document.getElementById("uv").innerText = uvVal;
+        const uvDetail = document.getElementById("uv-detail");
+        if (uvDetail) uvDetail.innerText = uvVal;
+        const uvStatus = document.getElementById("uv-status");
+        const uvStatusDetail = document.getElementById("uv-status-detail");
+        const uvMsg = uvVal < 50
+          ? { text: "Niedrig", cls: "small" }
+          : uvVal < 200
+            ? { text: "Mittel", cls: "small status-warn" }
+            : { text: "Hoch", cls: "small status-warn" };
+        if (uvStatus) { uvStatus.innerText = uvMsg.text; uvStatus.className = uvMsg.cls; }
+        if (uvStatusDetail) { uvStatusDetail.innerText = uvMsg.text; uvStatusDetail.className = uvMsg.cls; }
+      }
+
+      pushSensorReading(
+        (waterTemp !== null && waterTemp !== undefined) ? parseFloat(waterTemp) : null,
+        (luxVal    !== null && luxVal    !== undefined) ? parseFloat(luxVal)    : null,
+        (uvVal     !== null && uvVal     !== undefined) ? parseFloat(uvVal)     : null
+      );
 
       updateHealthScore();
     }

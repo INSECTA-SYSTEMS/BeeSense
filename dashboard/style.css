@@ -56,7 +56,20 @@ body {
   margin-bottom: 8px;
 }
 
-.header-left h1 {
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand-logo {
+  height: 64px;
+  width: auto;
+  filter: drop-shadow(0 2px 10px rgba(139,109,56,0.2));
+  transition: transform var(--transition);
+}
+.brand-logo:hover { transform: scale(1.05) rotate(-3deg); }
+
+.header-brand h1 {
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -72,14 +85,6 @@ body {
   font-weight: 400;
   margin-top: 2px;
 }
-
-.header-logo img {
-  height: 56px;
-  width: auto;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.1));
-  transition: transform var(--transition);
-}
-.header-logo img:hover { transform: scale(1.05) rotate(-3deg); }
 
 /* ── Navigation ─────────────────── */
 .nav {
@@ -160,6 +165,9 @@ body {
 .card-activity::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
 .card-location::before { background: linear-gradient(90deg, #a06a1a, var(--honey-dark)); }
 .card-settings::before { background: linear-gradient(90deg, var(--honey-mid), var(--honey-light)); }
+.card-water::before    { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+.card-light::before    { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.card-uv::before       { background: linear-gradient(90deg, #7c3aed, #c084fc); }
 
 .card h2 {
   font-size: 0.82rem;
@@ -202,12 +210,26 @@ body {
   50% { opacity: 0.5; transform: scale(1.4); }
 }
 
+/* ── Section Labels ─────────────── */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin: 20px 0 8px;
+  padding-left: 2px;
+}
+.section-label:first-of-type { margin-top: 0; }
+
 /* ── Grid Layouts ───────────────── */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
+.grid-flights { grid-template-columns: repeat(3, 1fr); }
+.grid-sensors  { grid-template-columns: repeat(5, 1fr); margin-top: 0; }
 .grid-wide {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -219,9 +241,17 @@ body {
   grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
   gap: 16px;
 }
+@media (max-width: 900px) {
+  .grid-sensors { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
+}
 @media (max-width: 800px) {
   .flights-layout { grid-template-columns: 1fr; }
   .grid { grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
+  .grid-flights { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .grid-flights { grid-template-columns: 1fr 1fr; }
+  .grid-sensors { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── Health Score Ring ──────────── */
@@ -418,11 +448,11 @@ body.theme-dark {
   --input-border: rgba(255, 255, 255, 0.1);
 }
 
-body.theme-dark .header-left h1 {
+body.theme-dark .header-brand h1 {
   background: linear-gradient(135deg, #fbbf24, #f5d847);
   -webkit-background-clip: text; background-clip: text;
 }
-body.theme-dark .header-logo img {
+body.theme-dark .brand-logo {
   filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3)) brightness(0.95);
 }
 body.theme-dark .nav-btn.active { background: #fbbf24; color: #0f0f1a; }
@@ -453,8 +483,9 @@ body.theme-dark .hm-5 { background: rgba(251,191,36,0.9); }
 /* ── Responsive ─────────────────── */
 @media (max-width: 640px) {
   body { padding: 12px 14px 30px; }
-  .header-left h1 { font-size: 1.5rem; }
-  .header-logo img { height: 40px; }
+  .header-brand h1 { font-size: 1.5rem; }
+  .header-brand { gap: 10px; }
+  .brand-logo { height: 44px; }
   .nav { border-radius: var(--radius); }
   .nav-btn { padding: 7px 12px; font-size: 0.8rem; }
   .value { font-size: 2rem; }
