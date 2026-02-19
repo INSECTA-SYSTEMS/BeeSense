@@ -31,6 +31,19 @@ from datetime import datetime
 OSEM_API_URL = "https://ingress.opensensemap.org"
 OSEM_AUTH_TOKEN = "9b7caacbf7b53af8a05d93423e5df5b630d0e67fb7abce2499420004a8bc9aa5"
 
+# BeeSense Dashboard Konfiguration
+DASHBOARD_API_URL = "http://3.75.94.127:8080"
+
+# Mapping: Sensor-Type → Dashboard-Endpoint + JSON-Feld
+# Die Keys entsprechen dem "type"-Feld aus den DATA|-Zeilen des ESP32
+DASHBOARD_TYPE_MAP = {
+    "Beehive_Temperature": ("/api/sensors/water", "waterTemperature"),
+    "Temperature":         ("/api/sensors",       "temperature"),
+    "Humidity":            ("/api/sensors",       "humidity"),
+    "UV":                  ("/api/sensors/light", "uv"),
+    "Lux":                 ("/api/sensors/light", "lux"),
+}
+
 # Serial Konfiguration
 BAUD_RATE = 115200
 TIMEOUT = 2
@@ -100,6 +113,36 @@ def send_to_opensensemap(box_id, sensor_id, value):
     except requests.exceptions.RequestException as e:
         print_error(f"Netzwerkfehler beim Senden: {e}")
         return False
+
+def send_to_dashboard(sensor_type, value):
+    """Sendet einen Messwert an das BeeSense Dashboard"""
+    mapping = DASHBOARD_TYPE_MAP.get(sensor_type)
+    if not mapping:
+        print_warning(f"Kein Dashboard-Mapping für Typ '{sensor_type}'")
+        return False
+
+    endpoint, field = mapping
+    url = f"{DASHBOARD_API_URL}{endpoint}"
+
+    data = {
+        field: value,
+        "timestamp": int(time.time() * 1000)  # ms seit Epoch
+    }
+
+    try:
+        response = requests.post(url, json=data, timeout=10)
+
+        if response.status_code == 200:
+            print_success(f"Dashboard: {field}={value} → {endpoint}")
+            return True
+        else:
+            print_error(f"Dashboard-Fehler (HTTP {response.status_code}): {response.text}")
+            return False
+
+    except requests.exceptions.RequestException as e:
+        print_error(f"Dashboard-Netzwerkfehler: {e}")
+        return False
+
 
 def parse_data_line(line):
     """Parst eine DATA-Zeile vom Arduino"""
@@ -229,6 +272,12 @@ def main():
                             send_to_opensensemap(
                                 parsed['boxId'],
                                 parsed['sensorId'],
+                                parsed['value']
+                            )
+
+                            # Zum BeeSense Dashboard senden
+                            send_to_dashboard(
+                                parsed['type'],
                                 parsed['value']
                             )
                         else:
