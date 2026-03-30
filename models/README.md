@@ -1,42 +1,58 @@
 # Models
 
-## 1. Training
+Dieser Ordner enthält die komplette Trainings- und Deployment-Pipeline für das Bumblebee-Detektionsmodell.
 
-Trainiere das Modell mit YOLOv8n:
+## Inhalte
 
-```python
-python models/train.py
+- `train.py` – YOLO-Training
+- `predict_pictures.py` – Inferenz auf Testbildern
+- `export_onnx.py` – ONNX-Export (ESP-kompatibel)
+- `prepare_calib_data.py` – Kalibrierungsbilder erzeugen
+- `quantize_onnx_model.py` – Quantisierung zu `.espdl`
+- `yolov11_bumblebee.yaml` – Datensatz-Konfiguration
+
+## Voraussetzungen
+
+- Python 3.10+
+- Pakete: `ultralytics`, `torch`, `onnx`, `onnxsim`, `Pillow`, `torchvision`, `esp-ppq`
+
+## 1) Training
+
+```powershell
+cd models
+python train.py
 ```
 
-Nach dem Training findest du die Gewichte in: `models/runs/detect/train/weights/best.pt`
+Ergebnis: `runs/detect/train_224_224/weights/best.pt`
 
----
+## 2) Testen / Inferenz
 
-## 2. Testen
+```powershell
+cd models
+python predict_pictures.py
+```
 
-Du kannst Bilder aus `data/images/test` mit `models/predict_pictures.py` prüfen:
+Standardquelle: `../data/bumblebees/images/test/`  
+Ausgabe: `runs/detect/predict/`
 
-- Annotierte Bilder werden in `models/runs/detect/predict/` gespeichert.
-- `conf` = Confidence Threshold, kann angepasst werden (z.B. 0.2–0.5).
+## 3) Export und Quantisierung für ESP32-S3
 
-
-## 3. ESP32-S3 Deployment
-
-Nach dem Training kann das Modell für ESP32-S3 quantisiert und deployed werden.
-
-Wenn du ein neues Modell trainiert hast (`best.pt`), führe folgende Schritte aus:
-
-```bash
+```powershell
 cd models
 
-# 1. Exportiere zu ONNX
+# ONNX exportieren
 python export_onnx.py
 
-# 2. Erstelle Kalibrierungsdaten
+# Kalibrierdaten erzeugen (32 Bilder, 224x224)
 python prepare_calib_data.py
 
-# 3. Quantisiere für ESP32-S3
+# INT8 Quantisierung nach ESP-DL
 python quantize_onnx_model.py
 ```
 
-Das quantisierte esp-dl Model findest du im Ordner `quantized_model`.
+Ergebnis: `quantized_model/espdet_pico_224_224_bumblebee.espdl`
+
+## Hinweise
+
+- Für neue Trainingsläufe Pfade in den Skripten ggf. auf den gewünschten Run anpassen.
+- Wenn du das Datenset erweitert hast, zuerst Kalibrierungsdaten neu erzeugen.
