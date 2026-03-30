@@ -82,6 +82,11 @@ class BeeSenseDatabase {
             this.db.run(`CREATE INDEX IF NOT EXISTS idx_daily_date ON daily_stats(date)`);
             this.db.run(`CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON system_logs(timestamp)`);
 
+            // Migrate: add new sensor columns if they don't exist yet
+            this.db.run(`ALTER TABLE sensor_data ADD COLUMN water_temperature REAL`, () => {});
+            this.db.run(`ALTER TABLE sensor_data ADD COLUMN lux REAL`, () => {});
+            this.db.run(`ALTER TABLE sensor_data ADD COLUMN uv REAL`, () => {});
+
             console.log('✅ Datenbank-Tabellen initialisiert');
         });
     }
@@ -89,14 +94,14 @@ class BeeSenseDatabase {
     /**
      * Insert sensor data
      */
-    insertSensorData(temperature, humidity, timestamp = Date.now()) {
+    insertSensorData(temperature, humidity, waterTemperature = null, lux = null, uv = null, timestamp = Date.now()) {
         return new Promise((resolve, reject) => {
             const stmt = this.db.prepare(`
-                INSERT INTO sensor_data (temperature, humidity, timestamp)
-                VALUES (?, ?, ?)
+                INSERT INTO sensor_data (temperature, humidity, water_temperature, lux, uv, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
             `);
             
-            stmt.run(temperature, humidity, timestamp, function(err) {
+            stmt.run(temperature, humidity, waterTemperature, lux, uv, timestamp, function(err) {
                 if (err) {
                     reject(err);
                 } else {

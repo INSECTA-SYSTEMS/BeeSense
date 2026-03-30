@@ -10,12 +10,12 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const BeeSenseDatabase = require('./database');
+const { createDatabase } = require('./database-config');
 
 const PORT = 8085;
 
 // Initialize database
-const db = new BeeSenseDatabase();
+const db = createDatabase();
 
 // Aktuelle Tracking-Daten
 let trackingData = {
@@ -29,9 +29,40 @@ let trackingData = {
 let sensorData = {
     temperature: null,
     humidity: null,
+    waterTemperature: null,
+    lux: null,
+    uv: null,
     timestamp: Date.now(),
     lastUpdate: null
 };
+
+// Load today's stats from database on startup
+async function loadTodayStats() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const stats = await db.getDailyStats(today, today);
+        if (stats && stats.length > 0) {
+            trackingData.einflug = stats[0].einflug_count || 0;
+            trackingData.ausflug = stats[0].ausflug_count || 0;
+            trackingData.lastUpdate = new Date().toISOString();
+            console.log(`📊 Heute geladen: ${trackingData.einflug} Einflüge, ${trackingData.ausflug} Ausflüge`);
+        }
+
+        // Also load latest sensor data
+        const latestSensor = await db.getLatestSensorData();
+        if (latestSensor) {
+            sensorData.temperature = latestSensor.temperature;
+            sensorData.humidity = latestSensor.humidity;
+            sensorData.waterTemperature = latestSensor.water_temperature ?? null;
+            sensorData.lux = latestSensor.lux ?? null;
+            sensorData.uv = latestSensor.uv ?? null;
+            sensorData.lastUpdate = new Date().toISOString();
+            console.log(`🌡️ Sensoren geladen: ${sensorData.temperature}°C, ${sensorData.humidity}%`);
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden der Tagesdaten:', err.message);
+    }
+}
 
 // Server-Sent Events Clients (für Live-Updates)
 const sseClients = new Set();
@@ -115,8 +146,11 @@ const server = http.createServer((req, res) => {
                 
                 // Daten aktualisieren
                 sensorData = {
-                    temperature: data.temperature || sensorData.temperature,
-                    humidity: data.humidity || sensorData.humidity,
+                    temperature: data.temperature ?? sensorData.temperature,
+                    humidity: data.humidity ?? sensorData.humidity,
+                    waterTemperature: data.waterTemperature ?? sensorData.waterTemperature,
+                    lux: data.lux ?? sensorData.lux,
+                    uv: data.uv ?? sensorData.uv,
                     timestamp: data.timestamp || Date.now(),
                     lastUpdate: new Date().toISOString()
                 };
@@ -124,8 +158,11 @@ const server = http.createServer((req, res) => {
                 console.log(`[${new Date().toLocaleTimeString()}] Sensor-Daten empfangen:`, sensorData);
 
                 // In Datenbank speichern
-                db.insertSensorData(sensorData.temperature, sensorData.humidity, sensorData.timestamp)
-                    .catch(err => console.error('DB Error (sensor):', err.message));
+                db.insertSensorData(
+                    sensorData.temperature, sensorData.humidity,
+                    sensorData.waterTemperature, sensorData.lux, sensorData.uv,
+                    sensorData.timestamp
+                ).catch(err => console.error('DB Error (sensor):', err.message));
 
                 // Alle SSE Clients benachrichtigen
                 broadcastToClients({ tracking: trackingData, sensors: sensorData });
@@ -138,6 +175,94 @@ const server = http.createServer((req, res) => {
                 res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
             }
         });
+        return;
+    }
+
+    // API: Wassertemperatur empfangen (POST vom DS18B20-Sensor)
+    if (url.pathname === '/api/sensors/water' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                sensorData.waterTemperature = data.waterTemperature ?? data.temperature ?? sensorData.waterTemperature;
+                sensorData.timestamp = data.timestamp || Date.now();
+                sensorData.lastUpdate = new Date().toISOString();
+
+                console.log(`[${new Date().toLocaleTimeString()}] Wassertemperatur empfangen: ${sensorData.waterTemperature}°C`);
+
+                db.insertSensorData(
+                    sensorData.temperature, sensorData.humidity,
+                    sensorData.waterTemperature, sensorData.lux, sensorData.uv,
+                    sensorData.timestamp
+                ).catch(err => console.error('DB Error (water sensor):', err.message));
+
+                broadcastToClients({ tracking: trackingData, sensors: sensorData });
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, message: 'Wassertemperatur empfangen' }));
+            } catch (e) {
+                console.error('Fehler beim Parsen:', e.message);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+
+    // API: Wassertemperatur abrufen (GET)
+    if (url.pathname === '/api/sensors/water' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            waterTemperature: sensorData.waterTemperature,
+            timestamp: sensorData.timestamp,
+            lastUpdate: sensorData.lastUpdate
+        }));
+        return;
+    }
+
+    // API: Licht- & UV-Daten empfangen (POST vom LTR329/VEML6070-Sensor)
+    if (url.pathname === '/api/sensors/light' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                sensorData.lux = data.lux ?? sensorData.lux;
+                sensorData.uv = data.uv ?? sensorData.uv;
+                sensorData.timestamp = data.timestamp || Date.now();
+                sensorData.lastUpdate = new Date().toISOString();
+
+                console.log(`[${new Date().toLocaleTimeString()}] Licht/UV empfangen: ${sensorData.lux} Lux, UV: ${sensorData.uv}`);
+
+                db.insertSensorData(
+                    sensorData.temperature, sensorData.humidity,
+                    sensorData.waterTemperature, sensorData.lux, sensorData.uv,
+                    sensorData.timestamp
+                ).catch(err => console.error('DB Error (light sensor):', err.message));
+
+                broadcastToClients({ tracking: trackingData, sensors: sensorData });
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: true, message: 'Licht/UV-Daten empfangen' }));
+            } catch (e) {
+                console.error('Fehler beim Parsen:', e.message);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+            }
+        });
+        return;
+    }
+
+    // API: Licht- & UV-Daten abrufen (GET)
+    if (url.pathname === '/api/sensors/light' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            lux: sensorData.lux,
+            uv: sensorData.uv,
+            timestamp: sensorData.timestamp,
+            lastUpdate: sensorData.lastUpdate
+        }));
         return;
     }
 
@@ -196,8 +321,45 @@ const server = http.createServer((req, res) => {
             .catch(err => {
                 console.error('DB Error (history):', err.message);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(historicalData));
+                res.end(JSON.stringify({ flights: [], temperature: [], humidity: [] }));
             });
+        return;
+    }
+
+    // API: Hourly history data (for heatmap & hourly chart)
+    if (url.pathname === '/api/history/hourly' && req.method === 'GET') {
+        const days = parseInt(url.searchParams.get('days')) || 7;
+        const startTime = Date.now() - days * 24 * 60 * 60 * 1000;
+
+        const query = `
+            SELECT 
+                strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch', 'localtime')) as date,
+                CAST(strftime('%H', datetime(timestamp/1000, 'unixepoch', 'localtime')) AS INTEGER) as hour,
+                COUNT(*) as count,
+                SUM(CASE WHEN direction = 'einflug' THEN 1 ELSE 0 END) as einflug,
+                SUM(CASE WHEN direction = 'ausflug' THEN 1 ELSE 0 END) as ausflug
+            FROM bee_detections
+            WHERE timestamp >= ?
+            GROUP BY date, hour
+            ORDER BY date ASC, hour ASC
+        `;
+
+        try {
+            db.db.all(query, [startTime], (err, rows) => {
+                if (err) {
+                    console.error('DB Error (hourly):', err.message);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify([]));
+                    return;
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(rows || []));
+            });
+        } catch (e) {
+            console.error('Hourly API error:', e.message);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify([]));
+        }
         return;
     }
 
@@ -245,7 +407,13 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        res.writeHead(200, { 'Content-Type': contentType });
+        // Add cache-control headers to prevent caching
+        res.writeHead(200, { 
+            'Content-Type': contentType,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
         res.end(data);
     });
 });
@@ -278,20 +446,29 @@ async function aggregateDailyData() {
 // Aggregiere Daten alle 10 Minuten
 setInterval(aggregateDailyData, 10 * 60 * 1000);
 
-// Initial aggregieren
-aggregateDailyData();
+// Start server only after loading today's data from DB
+async function startServer() {
+    // Wait briefly for DB tables to initialize
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Load today's data before accepting connections
+    await aggregateDailyData();
+    await loadTodayStats();
 
-// Server starten
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('🐝 BeeSense Dashboard Server gestartet');
-    console.log('=====================================');
-    console.log(`📊 Dashboard:        http://localhost:${PORT}`);
-    console.log(`📡 Tracking API:     http://localhost:${PORT}/api/tracking`);
-    console.log(`🌡️  Sensor API:       http://localhost:${PORT}/api/sensors`);
-    console.log(`📋 All Data API:     http://localhost:${PORT}/api/data`);
-    console.log(`🔴 Live Events:      http://localhost:${PORT}/api/events`);
-    console.log('');
-    console.log('Warte auf Daten vom ESP32 und Sensoren...');
-    console.log('');
-});
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log('');
+        console.log('🐝 BeeSense Dashboard Server gestartet');
+        console.log('=====================================');
+        console.log(`📊 Dashboard:        http://localhost:${PORT}`);
+        console.log(`📡 Tracking API:     http://localhost:${PORT}/api/tracking`);
+        console.log(`🌡️  Sensor API:       http://localhost:${PORT}/api/sensors`);
+        console.log(`� Water Temp API:   http://localhost:${PORT}/api/sensors/water`);
+        console.log(`💡 Light/UV API:     http://localhost:${PORT}/api/sensors/light`);
+        console.log(`�📋 All Data API:     http://localhost:${PORT}/api/data`);
+        console.log(`🔴 Live Events:      http://localhost:${PORT}/api/events`);
+        console.log('');
+        console.log('Warte auf Daten vom ESP32 und Sensoren...');
+        console.log('');
+    });
+}
+
+startServer();
