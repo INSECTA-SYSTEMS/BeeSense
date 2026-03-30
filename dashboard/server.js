@@ -4,7 +4,7 @@
  * Empfängt Tracking-Daten vom ESP32 und pusht sie live ans Dashboard.
  * 
  * Starten mit: node server.js
- * Dashboard öffnen: http://localhost:8080
+ * Dashboard öffnen: http://localhost:8085
  */
 
 const http = require('http');
@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const BeeSenseDatabase = require('./database');
 
-const PORT = 8080;
+const PORT = 8085;
 
 // Initialize database
 const db = new BeeSenseDatabase();

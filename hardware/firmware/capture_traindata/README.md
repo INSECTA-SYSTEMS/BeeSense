@@ -1,26 +1,35 @@
-
 # Capture Traindata Firmware
 
-## Funktionsweise
+Diese Firmware erzeugt Trainingsdaten direkt auf dem ESP32-S3:
 
-Dieses Programm läuft auf einem ESP32-S3 und nimmt automatisch jede Sekunde ein Bild mit einer Auflösung von 224x224 Pixeln auf. Die Bilder werden als JPEGs auf einer SD-Karte gespeichert und dienen als Trainingsdaten für KI-Anwendungen (z.B. Objekterkennung).
+- Kameraaufnahme in jedem Zyklus
+- Konvertierung und Crop auf `224x224`
+- Speicherung als JPEG auf SD-Karte
 
-## Deployment
+Ziel ist ein kontinuierlicher Bildstrom für spätere Annotation und Modelltraining.
 
-1. ESP-IDF installieren: [https://dl.espressif.com/dl/esp-idf/](https://dl.espressif.com/dl/esp-idf/)
-2. In das Projektverzeichnis wechseln (Pfad anpassen):
-	```
-	cd C:\Users\nilsg\repos\BeeSense\hardware\firmware\capture_traindata
-	```
-3. Target setzen (nur beim ersten build):
-	```
-	idf.py set-target esp32s3
-	```
-4. Firmware bauen:
-	```
-	idf.py build
-	```
-5. Flashen und Monitor starten (Port ggf. anpassen):
-	```
-	idf.py -p COM3 flash monitor
-	```
+## Voraussetzungen
+
+- ESP-IDF installiert
+- ESP32-S3 Board mit Kamera + SD-Karte
+
+## Build & Flash
+
+```powershell
+cd hardware/firmware/capture_traindata
+idf.py set-target esp32s3
+idf.py build
+idf.py -p COM3 flash monitor
+```
+
+## Laufzeitverhalten
+
+- Aufnahmeintervall: ca. 1 Sekunde
+- Bildgröße für Speicherung: `224x224`
+- Ausgabeordner auf SD-Karte: `/sdcard/bumblebee_traindata`
+
+## Troubleshooting
+
+- Kamera init fail: Pin-Mapping und Versorgung prüfen
+- SD mount fail: Karte formatieren (FAT32) und Kontakte prüfen
+- Speicherprobleme: PSRAM aktivieren, Build-Config prüfen
