@@ -2,7 +2,7 @@ import os
 import random
 from PIL import Image
 
-src_folder = "../data/images/train"  # oder val
+src_folder = "../data/bumblebees/images/train"  # oder val
 dst_folder = "calib_data"
 os.makedirs(dst_folder, exist_ok=True)
 

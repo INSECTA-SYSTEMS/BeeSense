@@ -1,0 +1,23 @@
+{
+  "name": "beesense-dashboard",
+  "version": "1.0.0",
+  "description": "BeeSense Dashboard Server with Database Support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "beehive",
+    "monitoring",
+    "bee",
+    "sensor",
+    "dashboard"
+  ],
+  "author": "BeeSense Team",
+  "license": "MIT",
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}

@@ -1,0 +1,8 @@
+name: bumblebee_detect
+version: "0.1.0"
+license: "MIT"
+description: bumblebee detect model.
+url: https://github.com/espressif/esp-dl/tree/master/models/bumblebee_detect
+dependencies: 
+  espressif/esp-dl:
+    version: "~3.2.0"

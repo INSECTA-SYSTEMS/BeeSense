@@ -1,0 +1,40 @@
+
+menu "models: bumblebee_detect"
+    config FLASH_ESPDET_PICO_224_224_BUMBLEBEE
+        bool "flash espdet_pico_224_224_bumblebee"
+        depends on !BUMBLEBEE_DETECT_MODEL_IN_SDCARD
+        default y
+
+    config DEFAULT_BUMBLEBEE_DETECT_MODEL
+        int
+        default 0
+
+
+    choice
+        prompt "model location"
+        default BUMBLEBEE_DETECT_MODEL_IN_FLASH_RODATA
+        help
+            bumblebee_detect model location
+        config BUMBLEBEE_DETECT_MODEL_IN_FLASH_RODATA
+            bool "flash_rodata"
+        config BUMBLEBEE_DETECT_MODEL_IN_FLASH_PARTITION
+            bool "flash_partition"
+        config BUMBLEBEE_DETECT_MODEL_IN_SDCARD
+            bool "sdcard"
+    endchoice
+
+
+    config BUMBLEBEE_DETECT_MODEL_LOCATION
+        int
+        default 0 if BUMBLEBEE_DETECT_MODEL_IN_FLASH_RODATA
+        default 1 if BUMBLEBEE_DETECT_MODEL_IN_FLASH_PARTITION
+        default 2 if BUMBLEBEE_DETECT_MODEL_IN_SDCARD
+
+    config BUMBLEBEE_DETECT_MODEL_SDCARD_DIR
+        string "bumblebee_detect model sdcard dir"
+        default "" if IDF_TARGET_ESP32S3
+        default "" if IDF_TARGET_ESP32P4
+        depends on BUMBLEBEE_DETECT_MODEL_IN_SDCARD
+        help
+            Directory of models relative to sdcard mount point.
+endmenu

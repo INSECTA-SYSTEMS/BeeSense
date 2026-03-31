@@ -1,0 +1,40 @@
+menu "BeeSense WiFi Configuration"
+
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "BeeSense_AP"
+        help
+            SSID (Netzwerkname) des WiFi Access Points.
+
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        default "beesense123"
+        help
+            Passwort für den WiFi Access Point.
+
+    config WIFI_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 5
+        help
+            Maximale Anzahl an Verbindungsversuchen bevor aufgegeben wird.
+
+    config DASHBOARD_HOST
+        string "Dashboard Server Host"
+        default "3.75.94.127"
+        help
+            IP-Adresse oder Hostname des Dashboard-Servers.
+
+    config DASHBOARD_PORT
+        int "Dashboard Server Port"
+        default 8080
+        help
+            Port des Dashboard-Servers für die HTTP API.
+
+    config WIFI_SEND_INTERVAL_MS
+        int "WiFi Send Interval (ms)"
+        default 10000
+        help
+            Intervall in Millisekunden für das Senden der Tracking-Daten ans Dashboard.
+            Standard: 10000ms (10 Sekunden)
+
+endmenu

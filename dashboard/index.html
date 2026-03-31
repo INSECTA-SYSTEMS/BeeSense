@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BeeSense – Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div class="header-brand">
+      <img src="assets/LogoBiene.png" alt="BeeSense" class="brand-logo">
+      <div>
+        <h1>BeeSense</h1>
+        <div class="subtitle">Dein smarter Bienenstock</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NAVIGATION ═══ -->
+  <div class="nav">
+    <button class="nav-btn active" data-view="overview">Übersicht</button>
+    <button class="nav-btn" data-view="flights">Flüge</button>
+    <button class="nav-btn" data-view="temperature">Temperatur</button>
+    <button class="nav-btn" data-view="humidity">Feuchtigkeit</button>
+    <button class="nav-btn" data-view="sensors">Sensoren</button>
+    <button class="nav-btn" data-view="location">Standort</button>
+    <button class="nav-btn" data-view="settings">Einstellungen</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: ÜBERSICHT
+       ═══════════════════════════════════════════ -->
+  <div id="view-overview" class="view active">
+
+    <!-- Top metrics -->
+    <div class="section-label">Flugaktivität</div>
+    <div class="grid grid-flights">
+      <div class="card card-flight">
+        <h2>Einflüge</h2>
+        <div class="value-row">
+          <div id="einflug" class="value">0</div>
+          <div class="unit">🐝 →</div>
+        </div>
+        <div class="small" id="einflug-info">Hummeln rein</div>
+      </div>
+
+      <div class="card card-flight">
+        <h2>Ausflüge</h2>
+        <div class="value-row">
+          <div id="ausflug" class="value">0</div>
+          <div class="unit">← 🐝</div>
+        </div>
+        <div class="small" id="ausflug-info">Hummeln raus</div>
+      </div>
+
+      <div class="card card-flight">
+        <h2>Gesamt heute</h2>
+        <div class="value-row">
+          <div id="flights" class="value">0</div>
+          <div class="unit">Flüge</div>
+        </div>
+        <div class="small" id="flights-info">Einflüge + Ausflüge</div>
+      </div>
+    </div>
+
+    <div class="section-label">Messwerte</div>
+    <div class="grid grid-sensors">
+      <div class="card card-temp">
+        <h2>Temperatur</h2>
+        <div class="value-row">
+          <div id="temperature" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small" id="temp-status">–</div>
+      </div>
+
+      <div class="card card-humidity">
+        <h2>Luftfeuchtigkeit</h2>
+        <div class="value-row">
+          <div id="humidity" class="value">--</div>
+          <div class="unit">%</div>
+        </div>
+        <div class="small" id="hum-status">–</div>
+      </div>
+
+      <div class="card card-water">
+        <h2>Stocktemp.</h2>
+        <div class="value-row">
+          <div id="water-temperature" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small" id="water-status">–</div>
+      </div>
+
+      <div class="card card-light">
+        <h2>Lichtstärke</h2>
+        <div class="value-row">
+          <div id="lux" class="value">--</div>
+          <div class="unit">lx</div>
+        </div>
+        <div class="small" id="lux-status">–</div>
+      </div>
+
+      <div class="card card-uv">
+        <h2>UV-Intensität</h2>
+        <div class="value-row">
+          <div id="uv" class="value">--</div>
+          <div class="unit">UV</div>
+        </div>
+        <div class="small" id="uv-status">–</div>
+      </div>
+    </div>
+
+    <!-- Health Score + Daily Summary -->
+    <div class="grid-wide">
+      <div class="card card-health">
+        <h2>Hive Health Score</h2>
+        <div class="health-score-container">
+          <div class="health-ring">
+            <svg viewBox="0 0 90 90">
+              <circle class="health-ring-bg" cx="45" cy="45" r="40" />
+              <circle class="health-ring-fill" id="health-ring-circle" cx="45" cy="45" r="40" />
+            </svg>
+            <span class="health-ring-text" id="health-score-value">--</span>
+          </div>
+          <div class="health-details">
+            <div class="health-detail-row">
+              <span class="health-dot" id="health-dot-temp" style="background:#9ca3af"></span>
+              <span>Temperatur: <strong id="health-temp-label">--</strong></span>
+            </div>
+            <div class="health-detail-row">
+              <span class="health-dot" id="health-dot-hum" style="background:#9ca3af"></span>
+              <span>Feuchtigkeit: <strong id="health-hum-label">--</strong></span>
+            </div>
+            <div class="health-detail-row">
+              <span class="health-dot" id="health-dot-act" style="background:#9ca3af"></span>
+              <span>Aktivität: <strong id="health-act-label">--</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="small" id="health-status" style="margin-top:10px;">Warte auf Daten…</div>
+      </div>
+
+      <div class="card card-flight">
+        <h2>Tagesübersicht</h2>
+        <div class="summary-row">
+          <div class="summary-item">
+            <div class="summary-icon flights">🐝</div>
+            <div class="summary-text">
+              <div class="summary-value" id="summary-flights">0</div>
+              <div class="summary-label">Flüge heute</div>
+            </div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon temp">🌡️</div>
+            <div class="summary-text">
+              <div class="summary-value" id="summary-temp">--</div>
+              <div class="summary-label">°C aktuell</div>
+            </div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-icon hum">💧</div>
+            <div class="summary-text">
+              <div class="summary-value" id="summary-hum">--</div>
+              <div class="summary-label">% Feuchte</div>
+            </div>
+          </div>
+        </div>
+        <div class="last-activity">
+          <div class="pulse-dot" id="live-dot"></div>
+          <span id="last-activity-text">Warte auf Daten…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Heatmap -->
+    <div style="margin-top:16px;">
+      <div class="card card-activity">
+        <h2>Aktivitäts-Heatmap (letzte 7 Tage)</h2>
+        <div class="heatmap-wrapper">
+          <div class="heatmap-grid" id="activity-heatmap"></div>
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Flugaktivität pro Stunde —
+          <span style="display:inline-flex;gap:4px;vertical-align:middle;">
+            <span class="heatmap-cell hm-0" style="width:12px;height:12px;display:inline-block;border-radius:2px;"></span> keine
+            <span class="heatmap-cell hm-2" style="width:12px;height:12px;display:inline-block;border-radius:2px;"></span> wenig
+            <span class="heatmap-cell hm-4" style="width:12px;height:12px;display:inline-block;border-radius:2px;"></span> mittel
+            <span class="heatmap-cell hm-5" style="width:12px;height:12px;display:inline-block;border-radius:2px;"></span> viel
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: FLÜGE
+       ═══════════════════════════════════════════ -->
+  <div id="view-flights" class="view">
+    <div class="chart-controls">
+      <label>Von: <input type="date" id="flights-date-from"></label>
+      <label>Bis: <input type="date" id="flights-date-to"></label>
+      <button class="btn btn-primary" id="flights-date-apply">Anwenden</button>
+      <div class="toggle-group">
+        <button class="toggle-btn active" data-mode="daily" data-chart="flights">Täglich</button>
+        <button class="toggle-btn" data-mode="hourly" data-chart="flights">Stündlich</button>
+      </div>
+      <button class="btn btn-export" id="export-flights">📥 CSV</button>
+    </div>
+
+    <div class="flights-layout">
+      <div>
+        <div class="card card-flight">
+          <h2>Einflüge / Ausflüge</h2>
+          <div class="value-row">
+            <div id="einflug-detail" class="value">0</div>
+            <div class="unit" style="margin-right:16px;">🐝 →</div>
+            <div id="ausflug-detail" class="value">0</div>
+            <div class="unit">← 🐝</div>
+          </div>
+          <div class="small">Heutige Flüge</div>
+        </div>
+
+        <div class="card card-flight" style="margin-top:16px;">
+          <h2>Verbindungsstatus</h2>
+          <div class="value-row">
+            <div id="connection-status" class="value" style="font-size:1.1rem;">⏳ Verbinde…</div>
+          </div>
+          <div class="small" id="last-update">Warte auf Daten…</div>
+        </div>
+      </div>
+
+      <div class="card card-flight">
+        <h2>Flugverlauf</h2>
+        <div class="chart-container">
+          <canvas id="flightsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: TEMPERATUR
+       ═══════════════════════════════════════════ -->
+  <div id="view-temperature" class="view">
+    <div class="chart-controls">
+      <label>Von: <input type="date" id="temp-date-from"></label>
+      <label>Bis: <input type="date" id="temp-date-to"></label>
+      <button class="btn btn-primary" id="temp-date-apply">Anwenden</button>
+      <button class="btn btn-export" id="export-temp">📥 CSV</button>
+    </div>
+
+    <div class="flights-layout">
+      <div class="card card-temp">
+        <h2>Aktuelle Temperatur</h2>
+        <div class="value-row">
+          <div id="temperature-detail" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small">Im Hummelstock</div>
+      </div>
+
+      <div class="card card-temp">
+        <h2>Temperaturverlauf</h2>
+        <div class="chart-container">
+          <canvas id="tempChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: FEUCHTIGKEIT
+       ═══════════════════════════════════════════ -->
+  <div id="view-humidity" class="view">
+    <div class="chart-controls">
+      <label>Von: <input type="date" id="hum-date-from"></label>
+      <label>Bis: <input type="date" id="hum-date-to"></label>
+      <button class="btn btn-primary" id="hum-date-apply">Anwenden</button>
+      <button class="btn btn-export" id="export-hum">📥 CSV</button>
+    </div>
+
+    <div class="flights-layout">
+      <div class="card card-humidity">
+        <h2>Aktuelle Luftfeuchtigkeit</h2>
+        <div class="value-row">
+          <div id="humidity-detail" class="value">--</div>
+          <div class="unit">%</div>
+        </div>
+        <div class="small" id="hum-status-detail">–</div>
+      </div>
+
+      <div class="card card-humidity">
+        <h2>Feuchtigkeitsverlauf</h2>
+        <div class="chart-container">
+          <canvas id="humChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: SENSOREN
+       ═══════════════════════════════════════════ -->
+  <div id="view-sensors" class="view">
+    <div class="grid" style="margin-bottom:16px;">
+      <div class="card card-water">
+        <h2>Stocktemperatur (DS18B20)</h2>
+        <div class="value-row">
+          <div id="water-temperature-detail" class="value">--</div>
+          <div class="unit">°C</div>
+        </div>
+        <div class="small" id="water-status-detail">Innentemperatur Stock</div>
+      </div>
+      <div class="card card-light">
+        <h2>Lichtstärke (LTR329)</h2>
+        <div class="value-row">
+          <div id="lux-detail" class="value">--</div>
+          <div class="unit">lx</div>
+        </div>
+        <div class="small" id="lux-status-detail">Umgebungslicht</div>
+      </div>
+      <div class="card card-uv">
+        <h2>UV-Intensität (VEML6070)</h2>
+        <div class="value-row">
+          <div id="uv-detail" class="value">--</div>
+          <div class="unit">UV</div>
+        </div>
+        <div class="small" id="uv-status-detail">Ultraviolett</div>
+      </div>
+    </div>
+    <div class="flights-layout">
+      <div class="card card-water">
+        <h2>Stocktemperatur-Verlauf</h2>
+        <div class="chart-container">
+          <canvas id="waterTempChart"></canvas>
+        </div>
+      </div>
+      <div class="card card-light">
+        <h2>Licht &amp; UV-Verlauf</h2>
+        <div class="chart-container">
+          <canvas id="luxUvChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: STANDORT
+       ═══════════════════════════════════════════ -->
+  <div id="view-location" class="view">
+    <div class="card card-location">
+      <h2>Standorte der Stöcke</h2>
+      <div class="location-layout">
+        <div>
+          <p class="location-coords">
+            Hier kann der Imker bis zu <strong>5 Stöcke</strong> (Name + Koordinaten) speichern und auf der Karte anzeigen lassen.
+          </p>
+
+          <form class="location-form" onsubmit="return false;">
+            <label>Name:<br/>
+              <input type="text" id="input-name" placeholder="z.B. Bienenstock1" maxlength="30" />
+            </label>
+            <label>Breite (Lat):<br/>
+              <input type="number" step="0.0001" id="input-lat" placeholder="z.B. 51.9607" />
+            </label>
+            <label>Länge (Lng):<br/>
+              <input type="number" step="0.0001" id="input-lng" placeholder="z.B. 7.6261" />
+            </label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="btn-save-stock" type="button">Speichern</button>
+              <button id="btn-show-current" type="button">Anzeigen</button>
+              <button id="btn-clear-stocks" type="button">Alle löschen</button>
+            </div>
+            <div class="small" id="stock-msg" style="margin-top:6px;">–</div>
+          </form>
+
+          <h3 style="margin-top:14px;margin-bottom:6px;font-size:0.9rem;">Gespeicherte Stöcke</h3>
+          <div id="stocks-list" class="stocks-list"></div>
+        </div>
+        <div>
+          <div id="map" class="map-container"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VIEW: EINSTELLUNGEN
+       ═══════════════════════════════════════════ -->
+  <div id="view-settings" class="view">
+    <div class="card card-settings">
+      <h2>Einstellungen</h2>
+      <p class="placeholder">
+        Hier kannst du zukünftig Parameter, Warnschwellen, Sensoroptionen usw. einstellen.
+      </p>
+      <div class="small" style="margin-top:10px;">Darstellung:</div>
+      <button id="theme-toggle" class="theme-toggle">🌙 Dunkles Design</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    // ═══ NAVIGATION ═══
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const views = {
+      overview:    document.getElementById("view-overview"),
+      flights:     document.getElementById("view-flights"),
+      temperature: document.getElementById("view-temperature"),
+      humidity:    document.getElementById("view-humidity"),
+      sensors:     document.getElementById("view-sensors"),
+      location:    document.getElementById("view-location"),
+      settings:    document.getElementById("view-settings"),
+    };
+
+    let map = null;
+
+    navButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.view;
+        navButtons.forEach(b => b.classList.toggle("active", b === btn));
+        Object.entries(views).forEach(([name, el]) => {
+          el.classList.toggle("active", name === target);
+        });
+        if (target === "location" && map) {
+          setTimeout(() => map.invalidateSize(), 100);
+        }
+      });
+    });
+
+    // ═══ THEME ═══
+    const themeToggleBtn = document.getElementById("theme-toggle");
+
+    function applyTheme(theme) {
+      if (theme === "dark") {
+        document.body.classList.add("theme-dark");
+        if (themeToggleBtn) themeToggleBtn.textContent = "☀️ Helles Design";
+      } else {
+        document.body.classList.remove("theme-dark");
+        if (themeToggleBtn) themeToggleBtn.textContent = "🌙 Dunkles Design";
+      }
+      localStorage.setItem("beeTheme", theme);
+      updateChartTheme();
+    }
+
+    const savedTheme = localStorage.getItem("beeTheme") || "light";
+    // Apply theme without updating charts yet (charts not initialized)
+    if (savedTheme === "dark") {
+      document.body.classList.add("theme-dark");
+      if (themeToggleBtn) themeToggleBtn.textContent = "☀️ Helles Design";
+    } else {
+      document.body.classList.remove("theme-dark");
+      if (themeToggleBtn) themeToggleBtn.textContent = "🌙 Dunkles Design";
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener("click", () => {
+        const isDark = document.body.classList.contains("theme-dark");
+        applyTheme(isDark ? "light" : "dark");
+      });
+    }
+
+    // ═══ CHART COLORS ═══
+    function getChartColors() {
+      const isDark = document.body.classList.contains("theme-dark");
+      return {
+        text:     isDark ? '#94a3b8' : '#6b7280',
+        grid:     isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+        honey:    isDark ? '#fbbf24' : '#c58c35',
+        honeyBg:  isDark ? 'rgba(251,191,36,0.25)' : 'rgba(197,140,53,0.25)',
+        orange:   isDark ? '#fb923c' : '#f97316',
+        orangeBg: isDark ? 'rgba(251,146,60,0.15)' : 'rgba(249,115,22,0.12)',
+        cyan:     isDark ? '#22d3ee' : '#06b6d4',
+        cyanBg:   isDark ? 'rgba(34,211,238,0.15)' : 'rgba(6,182,212,0.12)',
+        sky:      '#0ea5e9',
+        skyBg:    'rgba(14,165,233,0.12)',
+        amber:    '#f59e0b',
+        amberBg:  'rgba(245,158,11,0.12)',
+        violet:   '#8b5cf6',
+        violetBg: 'rgba(139,92,246,0.12)',
+      };
+    }
+
+    function updateChartTheme() {
+      const cc = getChartColors();
+      [flightsChart, tempChart, humChart, waterTempChart].forEach(chart => {
+        if (!chart) return;
+        chart.options.scales.x.ticks.color = cc.text;
+        chart.options.scales.y.ticks.color = cc.text;
+        chart.options.scales.x.grid.color = cc.grid;
+        chart.options.scales.y.grid.color = cc.grid;
+      });
+      if (luxUvChart) {
+        luxUvChart.options.scales.x.ticks.color = cc.text;
+        luxUvChart.options.scales.x.grid.color  = cc.grid;
+        luxUvChart.options.scales.yLux.grid.color = cc.grid;
+      }
+      if (flightsChart) {
+        flightsChart.data.datasets[0].backgroundColor = cc.honeyBg;
+        flightsChart.data.datasets[0].borderColor = cc.honey;
+        flightsChart.update('none');
+      }
+      if (tempChart) {
+        tempChart.data.datasets[0].borderColor = cc.orange;
+        tempChart.data.datasets[0].backgroundColor = cc.orangeBg;
+        tempChart.update('none');
+      }
+      if (humChart) {
+        humChart.data.datasets[0].borderColor = cc.cyan;
+        humChart.data.datasets[0].backgroundColor = cc.cyanBg;
+        humChart.update('none');
+      }
+    }
+
+    // ═══ HEALTH SCORE ═══
+    let currentTemp = null;
+    let currentHum  = null;
+    let currentFlights = 0;
+
+    function calculateHealthScore(temp, hum, flights) {
+      let tempScore = 0, humScore = 0, actScore = 0;
+      if (temp !== null && temp !== undefined) {
+        if (temp >= 24 && temp <= 32) tempScore = 100;
+        else if (temp >= 20 && temp <= 36) tempScore = 60;
+        else if (temp >= 15 && temp <= 40) tempScore = 30;
+        else tempScore = 10;
+      }
+      if (hum !== null && hum !== undefined) {
+        if (hum >= 50 && hum <= 80) humScore = 100;
+        else if (hum >= 40 && hum <= 90) humScore = 60;
+        else humScore = 20;
+      }
+      if (flights > 20) actScore = 100;
+      else if (flights > 10) actScore = 70;
+      else if (flights > 0) actScore = 40;
+      else actScore = 10;
+
+      const score = Math.round(tempScore * 0.35 + humScore * 0.35 + actScore * 0.3);
+      return { score, tempScore, humScore, actScore };
+    }
+
+    function updateHealthScore() {
+      const { score, tempScore, humScore, actScore } = calculateHealthScore(currentTemp, currentHum, currentFlights);
+      const circle = document.getElementById("health-ring-circle");
+      const scoreText = document.getElementById("health-score-value");
+      const circumference = 2 * Math.PI * 40;
+
+      if (currentTemp === null && currentHum === null && currentFlights === 0) {
+        scoreText.textContent = "--";
+        circle.style.strokeDashoffset = circumference;
+        document.getElementById("health-status").textContent = "Warte auf Daten…";
+        return;
+      }
+
+      circle.style.strokeDashoffset = circumference * (1 - score / 100);
+
+      let color;
+      if (score >= 75) color = '#22c55e';
+      else if (score >= 50) color = '#f97316';
+      else color = '#ef4444';
+
+      circle.style.stroke = color;
+      scoreText.textContent = score;
+      scoreText.style.color = color;
+
+      function getLabel(s) { return s >= 80 ? 'Gut' : s >= 50 ? 'OK' : s >= 25 ? 'Schwach' : 'Kritisch'; }
+      function getDotColor(s) { return s >= 80 ? '#22c55e' : s >= 50 ? '#f97316' : '#ef4444'; }
+
+      document.getElementById("health-temp-label").textContent = currentTemp !== null ? getLabel(tempScore) : '--';
+      document.getElementById("health-hum-label").textContent  = currentHum !== null ? getLabel(humScore) : '--';
+      document.getElementById("health-act-label").textContent  = getLabel(actScore);
+      document.getElementById("health-dot-temp").style.background = currentTemp !== null ? getDotColor(tempScore) : '#9ca3af';
+      document.getElementById("health-dot-hum").style.background  = currentHum !== null ? getDotColor(humScore) : '#9ca3af';
+      document.getElementById("health-dot-act").style.background  = getDotColor(actScore);
+
+      let statusText;
+      if (score >= 75) statusText = '🟢 Stock in gutem Zustand';
+      else if (score >= 50) statusText = '🟡 Stock benötigt Aufmerksamkeit';
+      else statusText = '🔴 Stock in kritischem Zustand';
+      document.getElementById("health-status").textContent = statusText;
+    }
+
+    // ═══ CHARTS SETUP ═══
+    const cc = getChartColors();
+
+    let labelsLast7 = [], flightsLast7 = [], tempLast7 = [], humLast7 = [];
+    for (let i = 7; i >= 1; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      labelsLast7.push(d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+      flightsLast7.push(0);
+      tempLast7.push(null);
+      humLast7.push(null);
+    }
+
+    const defaultChartOptions = (yExtra = {}) => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          padding: 10,
+          cornerRadius: 8,
+          titleFont: { family: "'Inter', sans-serif", weight: '600' },
+          bodyFont: { family: "'Inter', sans-serif" },
+        },
+      },
+      scales: {
+        y: { ticks: { color: cc.text }, grid: { color: cc.grid }, ...yExtra },
+        x: { ticks: { color: cc.text }, grid: { display: false } },
+      },
+    });
+
+    // Flights chart
+    const ctxFlights = document.getElementById("flightsChart").getContext("2d");
+    const flightsChart = new Chart(ctxFlights, {
+      type: "bar",
+      data: {
+        labels: labelsLast7,
+        datasets: [{
+          label: "Flüge pro Tag",
+          data: flightsLast7,
+          backgroundColor: cc.honeyBg,
+          borderColor: cc.honey,
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false,
+        }],
+      },
+      options: defaultChartOptions({ beginAtZero: true, ticks: { color: cc.text, stepSize: 20 } }),
+    });
+
+    // Temperature chart
+    const ctxTemp = document.getElementById("tempChart").getContext("2d");
+    const tempChart = new Chart(ctxTemp, {
+      type: "line",
+      data: {
+        labels: labelsLast7,
+        datasets: [{
+          label: "Ø Temperatur (°C)",
+          data: tempLast7,
+          borderColor: cc.orange,
+          backgroundColor: cc.orangeBg,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: cc.orange,
+          borderWidth: 2,
+        }],
+      },
+      options: defaultChartOptions({ beginAtZero: false }),
+    });
+
+    // Humidity chart
+    const ctxHum = document.getElementById("humChart").getContext("2d");
+    const humChart = new Chart(ctxHum, {
+      type: "line",
+      data: {
+        labels: labelsLast7,
+        datasets: [{
+          label: "Ø Luftfeuchtigkeit (%)",
+          data: humLast7,
+          borderColor: cc.cyan,
+          backgroundColor: cc.cyanBg,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: cc.cyan,
+          borderWidth: 2,
+        }],
+      },
+      options: defaultChartOptions({ beginAtZero: false, suggestedMin: 30, suggestedMax: 90 }),
+    });
+
+    // Sensor history (rolling 60 readings)
+    const MAX_SENSOR_READINGS = 60;
+    let sensorReadingLabels = [];
+    let sensorReadingWater  = [];
+    let sensorReadingLux    = [];
+    let sensorReadingUv     = [];
+
+    function pushSensorReading(waterTemp, lux, uv) {
+      if (waterTemp === null && lux === null && uv === null) return;
+      const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      sensorReadingLabels.push(now);
+      sensorReadingWater.push(waterTemp != null ? waterTemp : null);
+      sensorReadingLux.push(lux   != null ? lux   : null);
+      sensorReadingUv.push(uv    != null ? uv    : null);
+      if (sensorReadingLabels.length > MAX_SENSOR_READINGS) {
+        sensorReadingLabels.shift(); sensorReadingWater.shift();
+        sensorReadingLux.shift();    sensorReadingUv.shift();
+      }
+      if (waterTempChart) {
+        waterTempChart.data.labels = sensorReadingLabels;
+        waterTempChart.data.datasets[0].data = sensorReadingWater;
+        waterTempChart.update('none');
+      }
+      if (luxUvChart) {
+        luxUvChart.data.labels = sensorReadingLabels;
+        luxUvChart.data.datasets[0].data = sensorReadingLux;
+        luxUvChart.data.datasets[1].data = sensorReadingUv;
+        luxUvChart.update('none');
+      }
+    }
+
+    // Water temperature chart
+    const ctxWaterTemp = document.getElementById('waterTempChart').getContext('2d');
+    const waterTempChart = new Chart(ctxWaterTemp, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Stocktemp. (°C)',
+          data: [],
+          borderColor: '#0ea5e9',
+          backgroundColor: 'rgba(14,165,233,0.12)',
+          tension: 0.4, fill: true,
+          pointRadius: 3, pointHoverRadius: 5,
+          borderWidth: 2, spanGaps: true,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8 } },
+        scales: {
+          y: { ticks: { color: cc.text }, grid: { color: cc.grid }, beginAtZero: false },
+          x: { ticks: { color: cc.text, maxTicksLimit: 8 }, grid: { display: false } },
+        },
+      },
+    });
+
+    // Lux + UV combined chart
+    const ctxLuxUv = document.getElementById('luxUvChart').getContext('2d');
+    const luxUvChart = new Chart(ctxLuxUv, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Lux',
+            data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)',
+            tension: 0.4, fill: false, pointRadius: 3, borderWidth: 2,
+            yAxisID: 'yLux', spanGaps: true,
+          },
+          {
+            label: 'UV',
+            data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)',
+            tension: 0.4, fill: false, pointRadius: 3, borderWidth: 2,
+            yAxisID: 'yUv', spanGaps: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { display: true, labels: { color: cc.text, font: { family: "'Inter', sans-serif", size: 11 }, boxWidth: 12 } },
+          tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8 },
+        },
+        scales: {
+          yLux: { type: 'linear', position: 'left',  ticks: { color: '#f59e0b' }, grid: { color: cc.grid }, beginAtZero: true, title: { display: true, text: 'Lux', color: '#f59e0b', font: { size: 11 } } },
+          yUv:  { type: 'linear', position: 'right', ticks: { color: '#8b5cf6' }, grid: { display: false }, beginAtZero: true, title: { display: true, text: 'UV', color: '#8b5cf6', font: { size: 11 } } },
+          x: { ticks: { color: cc.text, maxTicksLimit: 8 }, grid: { display: false } },
+        },
+      },
+    });
+
+    // ═══ HISTORICAL DATA ═══
+    function updateChartsWithHistoricalData(days = 7) {
+      fetch(`/api/history?days=${days}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.flights && data.flights.length > 0) {
+            const labels = [], values = [];
+            data.flights.forEach(day => {
+              labels.push(new Date(day.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+              values.push(day.total || 0);
+            });
+            flightsChart.data.labels = labels;
+            flightsChart.data.datasets[0].data = values;
+            flightsChart.update();
+          }
+          if (data.temperature) {
+            const labels = [], values = [];
+            data.temperature.forEach(day => {
+              if (day.avg !== null && day.avg !== undefined) {
+                labels.push(new Date(day.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+                values.push(parseFloat(day.avg.toFixed(1)));
+              }
+            });
+            if (labels.length > 0) {
+              tempChart.data.labels = labels;
+              tempChart.data.datasets[0].data = values;
+              tempChart.update();
+            }
+          }
+          if (data.humidity) {
+            const labels = [], values = [];
+            data.humidity.forEach(day => {
+              if (day.avg !== null && day.avg !== undefined) {
+                labels.push(new Date(day.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }));
+                values.push(parseFloat(day.avg.toFixed(1)));
+              }
+            });
+            if (labels.length > 0) {
+              humChart.data.labels = labels;
+              humChart.data.datasets[0].data = values;
+              humChart.update();
+            }
+          }
+        })
+        .catch(err => console.log("⚠️ Keine historischen Daten:", err.message));
+    }
+
+    updateChartsWithHistoricalData();
+    setInterval(updateChartsWithHistoricalData, 30000);
+
+    // Apply full theme (including chart colors) now that charts are initialized
+    applyTheme(savedTheme);
+
+    // ═══ DATE RANGE CONTROLS ═══
+    (function initDateControls() {
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date(Date.now() - 7 * 24*60*60*1000).toISOString().split('T')[0];
+      ['flights', 'temp', 'hum'].forEach(prefix => {
+        const from = document.getElementById(`${prefix}-date-from`);
+        const to   = document.getElementById(`${prefix}-date-to`);
+        if (from) from.value = weekAgo;
+        if (to) to.value = today;
+      });
+    })();
+
+    function applyDateRange(fromId, toId) {
+      const from = document.getElementById(fromId).value;
+      const to   = document.getElementById(toId).value;
+      if (from && to) {
+        const days = Math.max(1, Math.ceil((new Date(to) - new Date(from)) / (24*60*60*1000)));
+        updateChartsWithHistoricalData(days);
+      }
+    }
+
+    document.getElementById("flights-date-apply")?.addEventListener("click", () => applyDateRange("flights-date-from", "flights-date-to"));
+    document.getElementById("temp-date-apply")?.addEventListener("click", () => applyDateRange("temp-date-from", "temp-date-to"));
+    document.getElementById("hum-date-apply")?.addEventListener("click", () => applyDateRange("hum-date-from", "hum-date-to"));
+
+    // ═══ HOURLY / DAILY TOGGLE ═══
+    document.querySelectorAll(".toggle-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const group = btn.closest(".toggle-group");
+        group.querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        if (btn.dataset.mode === "hourly" && btn.dataset.chart === "flights") loadHourlyFlights();
+        else if (btn.dataset.mode === "daily") updateChartsWithHistoricalData();
+      });
+    });
+
+    function loadHourlyFlights() {
+      fetch("/api/history/hourly?days=7")
+        .then(res => res.json())
+        .then(data => {
+          if (data.length > 0) {
+            const labels = data.map(d => `${d.date.slice(5)} ${String(d.hour).padStart(2, '0')}:00`);
+            const values = data.map(d => d.count);
+            flightsChart.data.labels = labels;
+            flightsChart.data.datasets[0].data = values;
+            flightsChart.update();
+          }
+        })
+        .catch(err => console.log("Keine stündlichen Daten:", err.message));
+    }
+
+    // ═══ CSV EXPORT ═══
+    function exportChartCSV(chart, filename) {
+      const labels = chart.data.labels;
+      const datasets = chart.data.datasets;
+      let csv = "Datum," + datasets.map(d => d.label).join(",") + "\n";
+      labels.forEach((label, i) => {
+        csv += label + "," + datasets.map(d => d.data[i] ?? "").join(",") + "\n";
+      });
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename + ".csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("export-flights")?.addEventListener("click", () => exportChartCSV(flightsChart, "beesense_fluege"));
+    document.getElementById("export-temp")?.addEventListener("click", () => exportChartCSV(tempChart, "beesense_temperatur"));
+    document.getElementById("export-hum")?.addEventListener("click", () => exportChartCSV(humChart, "beesense_feuchtigkeit"));
+
+    // ═══ ACTIVITY HEATMAP ═══
+    function renderHeatmap(data) {
+      const container = document.getElementById("activity-heatmap");
+      if (!container) return;
+      container.innerHTML = "";
+
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+
+      const lookup = {};
+      let maxCount = 1;
+      if (data && data.length > 0) {
+        data.forEach(row => {
+          if (!lookup[row.date]) lookup[row.date] = {};
+          lookup[row.date][row.hour] = row.count;
+          if (row.count > maxCount) maxCount = row.count;
+        });
+      }
+
+      // Header row
+      const corner = document.createElement("div");
+      corner.className = "heatmap-label";
+      container.appendChild(corner);
+      for (let h = 0; h < 24; h++) {
+        const hdr = document.createElement("div");
+        hdr.className = "heatmap-header";
+        hdr.textContent = h % 3 === 0 ? `${h}` : "";
+        container.appendChild(hdr);
+      }
+
+      // Data rows
+      days.forEach(dateStr => {
+        const d = new Date(dateStr);
+        const label = document.createElement("div");
+        label.className = "heatmap-label";
+        label.textContent = d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+        container.appendChild(label);
+
+        for (let h = 0; h < 24; h++) {
+          const cell = document.createElement("div");
+          const count = lookup[dateStr]?.[h] || 0;
+          const level = count === 0 ? 0 : Math.min(5, Math.ceil((count / maxCount) * 5));
+          cell.className = `heatmap-cell hm-${level}`;
+          cell.title = `${dateStr} ${String(h).padStart(2, '0')}:00 — ${count} Flüge`;
+          container.appendChild(cell);
+        }
+      });
+    }
+
+    function loadHeatmapData() {
+      fetch("/api/history/hourly?days=7")
+        .then(res => res.json())
+        .then(data => renderHeatmap(data))
+        .catch(() => renderHeatmap([]));
+    }
+
+    loadHeatmapData();
+    setInterval(loadHeatmapData, 60000);
+
+    // ═══ MAP & STOCK MANAGEMENT ═══
+    const STOCKS_KEY = "beeStocks_v1";
+    const MAX_STOCKS = 5;
+
+    const nameInput  = document.getElementById("input-name");
+    const latInputEl = document.getElementById("input-lat");
+    const lngInputEl = document.getElementById("input-lng");
+    const msgEl      = document.getElementById("stock-msg");
+    const listEl     = document.getElementById("stocks-list");
+
+    function setMsg(text) { if (msgEl) msgEl.innerText = text; }
+
+    function loadStocks() {
+      try {
+        const raw = localStorage.getItem(STOCKS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
+    }
+
+    function saveStocks(stocks) { localStorage.setItem(STOCKS_KEY, JSON.stringify(stocks)); }
+    function normalizeName(name) { return (name || "").trim().replace(/\s+/g, " "); }
+    function isValidLatLng(lat, lng) {
+      return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    }
+
+    function upsertStock(stock) {
+      const stocks = loadStocks();
+      const idx = stocks.findIndex(s => s.name.toLowerCase() === stock.name.toLowerCase());
+      if (idx >= 0) {
+        stocks[idx] = stock;
+        saveStocks(stocks);
+        return { ok: true, msg: `„${stock.name}" aktualisiert.` };
+      }
+      if (stocks.length >= MAX_STOCKS) return { ok: false, msg: `Maximal ${MAX_STOCKS} Stöcke erlaubt.` };
+      stocks.push(stock);
+      saveStocks(stocks);
+      return { ok: true, msg: `„${stock.name}" gespeichert.` };
+    }
+
+    function deleteStockByName(name) {
+      const stocks = loadStocks().filter(s => s.name.toLowerCase() !== name.toLowerCase());
+      saveStocks(stocks);
+    }
+
+    function clearAllStocks() { localStorage.removeItem(STOCKS_KEY); }
+
+    const initialStocks = loadStocks();
+    let currentLat = initialStocks[0]?.lat ?? 51.9607;
+    let currentLng = initialStocks[0]?.lng ?? 7.6261;
+
+    map = L.map("map").setView([currentLat, currentLng], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    const marker = L.marker([currentLat, currentLng]).addTo(map).bindPopup("Stock-Standort").openPopup();
+
+    function showOnMap(lat, lng, popupText = "Stock-Standort") {
+      map.setView([lat, lng], 13);
+      marker.setLatLng([lat, lng]);
+      marker.bindPopup(popupText).openPopup();
+    }
+
+    function renderStocks() {
+      const stocks = loadStocks();
+      if (!listEl) return;
+      if (stocks.length === 0) {
+        listEl.innerHTML = `<div class="small">Noch keine Stöcke gespeichert.</div>`;
+        return;
+      }
+      listEl.innerHTML = "";
+      stocks.forEach(stock => {
+        const item = document.createElement("div");
+        item.className = "stock-item";
+
+        const left = document.createElement("div");
+        left.innerHTML = `<div class="stock-name">${stock.name}</div><div class="stock-meta">${stock.lat.toFixed(4)}, ${stock.lng.toFixed(4)}</div>`;
+
+        const actions = document.createElement("div");
+        actions.className = "stock-actions";
+
+        const btnShow = document.createElement("button");
+        btnShow.className = "btn-show";
+        btnShow.type = "button";
+        btnShow.innerText = "Anzeigen";
+        btnShow.addEventListener("click", () => {
+          showOnMap(stock.lat, stock.lng, stock.name);
+          if (nameInput) nameInput.value = stock.name;
+          if (latInputEl) latInputEl.value = stock.lat.toFixed(4);
+          if (lngInputEl) lngInputEl.value = stock.lng.toFixed(4);
+          setMsg(`„${stock.name}" auf Karte angezeigt.`);
+        });
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-delete";
+        btnDel.type = "button";
+        btnDel.innerText = "Löschen";
+        btnDel.addEventListener("click", () => {
+          deleteStockByName(stock.name);
+          renderStocks();
+          setMsg(`„${stock.name}" gelöscht.`);
+        });
+
+        actions.appendChild(btnShow);
+        actions.appendChild(btnDel);
+        item.appendChild(left);
+        item.appendChild(actions);
+        listEl.appendChild(item);
+      });
+    }
+
+    document.getElementById("btn-save-stock")?.addEventListener("click", () => {
+      const name = normalizeName(nameInput?.value);
+      const lat = parseFloat(latInputEl?.value);
+      const lng = parseFloat(lngInputEl?.value);
+      if (!name) { setMsg("Bitte einen Namen eingeben."); return; }
+      if (!isValidLatLng(lat, lng)) { setMsg("Bitte gültige Koordinaten eingeben."); return; }
+      const result = upsertStock({ name, lat, lng, updatedAt: Date.now() });
+      setMsg(result.msg);
+      if (result.ok) { renderStocks(); showOnMap(lat, lng, name); }
+    });
+
+    document.getElementById("btn-show-current")?.addEventListener("click", () => {
+      const name = normalizeName(nameInput?.value) || "Stock-Standort";
+      const lat = parseFloat(latInputEl?.value);
+      const lng = parseFloat(lngInputEl?.value);
+      if (!isValidLatLng(lat, lng)) { setMsg("Bitte gültige Koordinaten eingeben."); return; }
+      showOnMap(lat, lng, name);
+      setMsg(`„${name}" auf Karte angezeigt (nicht gespeichert).`);
+    });
+
+    document.getElementById("btn-clear-stocks")?.addEventListener("click", () => {
+      clearAllStocks();
+      renderStocks();
+      setMsg("Alle Stöcke gelöscht.");
+    });
+
+    renderStocks();
+    setMsg("–");
+
+    // ═══ LIVE DATA (SSE) ═══
+    let einflug = 0, ausflug = 0, isConnected = false;
+
+    function updateUI(data) {
+      einflug = data.einflug || 0;
+      ausflug = data.ausflug || 0;
+      const total = einflug + ausflug;
+      currentFlights = total;
+
+      document.getElementById("einflug").innerText = einflug;
+      document.getElementById("ausflug").innerText = ausflug;
+      document.getElementById("flights").innerText = total;
+
+      const eid = document.getElementById("einflug-detail");
+      const aid = document.getElementById("ausflug-detail");
+      if (eid) eid.innerText = einflug;
+      if (aid) aid.innerText = ausflug;
+
+      // Summary
+      document.getElementById("summary-flights").innerText = total;
+
+      // Last activity
+      if (data.lastUpdate) {
+        const time = new Date(data.lastUpdate).toLocaleTimeString("de-DE");
+        const lastUpdateEl = document.getElementById("last-update");
+        if (lastUpdateEl) lastUpdateEl.innerText = `Letztes Update: ${time}`;
+        document.getElementById("last-activity-text").innerText = `Letzte Aktivität: ${time}`;
+      }
+
+      updateHealthScore();
+    }
+
+    function setConnectionStatus(connected) {
+      isConnected = connected;
+      const statusEl = document.getElementById("connection-status");
+      const liveDot  = document.getElementById("live-dot");
+      if (statusEl) {
+        statusEl.innerText = connected ? "✅ Verbunden" : "❌ Getrennt";
+        statusEl.style.color = connected ? "#22c55e" : "#ef4444";
+      }
+      if (liveDot) {
+        liveDot.classList.toggle("offline", !connected);
+      }
+    }
+
+    function connectToServer() {
+      setConnectionStatus(false);
+      const evtSource = new EventSource("/api/events");
+
+      evtSource.onopen = () => {
+        console.log("SSE verbunden");
+        setConnectionStatus(true);
+      };
+
+      evtSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.tracking) updateUI(data.tracking);
+          if (data.sensors) updateSensorData(data.sensors);
+          setConnectionStatus(true);
+        } catch (e) { console.error("SSE parse error:", e); }
+      };
+
+      evtSource.onerror = () => {
+        setConnectionStatus(false);
+        evtSource.close();
+        setTimeout(connectToServer, 3000);
+      };
+    }
+
+    // Initial data load
+    fetch("/api/tracking")
+      .then(res => res.json())
+      .then(data => { updateUI(data); setConnectionStatus(true); })
+      .catch(() => setConnectionStatus(false));
+
+    connectToServer();
+
+    // ═══ SENSOR DATA ═══
+    function updateSensorData(sensorData) {
+      const temp      = sensorData.temperature;
+      const hum       = sensorData.humidity;
+      const waterTemp = sensorData.waterTemperature;
+      const luxVal    = sensorData.lux;
+      const uvVal     = sensorData.uv;
+
+      if (temp !== null && temp !== undefined) {
+        currentTemp = temp;
+        document.getElementById("temperature").innerText = temp.toFixed(1);
+        document.getElementById("temperature-detail").innerText = temp.toFixed(1);
+        document.getElementById("summary-temp").innerText = temp.toFixed(1);
+
+        const tempStatus = document.getElementById("temp-status");
+        if (temp >= 24 && temp <= 32) {
+          tempStatus.innerText = "Temperatur im guten Bereich";
+          tempStatus.className = "small status-ok";
+        } else {
+          tempStatus.innerText = "Temperatur außerhalb Optimalbereich";
+          tempStatus.className = "small status-warn";
+        }
+      }
+
+      if (hum !== null && hum !== undefined) {
+        currentHum = hum;
+        document.getElementById("humidity").innerText = hum.toFixed(1);
+        const humDetail = document.getElementById("humidity-detail");
+        if (humDetail) humDetail.innerText = hum.toFixed(1);
+        document.getElementById("summary-hum").innerText = hum.toFixed(1);
+
+        const humStatus = document.getElementById("hum-status");
+        if (hum >= 50 && hum <= 80) {
+          humStatus.innerText = "Luftfeuchtigkeit im guten Bereich";
+          humStatus.className = "small status-ok";
+        } else {
+          humStatus.innerText = "Luftfeuchtigkeit außerhalb Optimalbereich";
+          humStatus.className = "small status-warn";
+        }
+
+        const humStatusDetail = document.getElementById("hum-status-detail");
+        if (humStatus && humStatusDetail) {
+          humStatusDetail.innerText = humStatus.innerText;
+          humStatusDetail.className = humStatus.className;
+        }
+      }
+
+      if (waterTemp !== null && waterTemp !== undefined) {
+        const wt = parseFloat(waterTemp).toFixed(1);
+        document.getElementById("water-temperature").innerText = wt;
+        const wtDetail = document.getElementById("water-temperature-detail");
+        if (wtDetail) wtDetail.innerText = wt;
+        const waterStatus = document.getElementById("water-status");
+        const waterStatusDetail = document.getElementById("water-status-detail");
+        const wtMsg = (waterTemp >= 10 && waterTemp <= 35)
+          ? { text: "Im normalen Bereich", cls: "small status-ok" }
+          : { text: "Außerhalb Normalbereich", cls: "small status-warn" };
+        if (waterStatus) { waterStatus.innerText = wtMsg.text; waterStatus.className = wtMsg.cls; }
+        if (waterStatusDetail) { waterStatusDetail.innerText = wtMsg.text; waterStatusDetail.className = wtMsg.cls; }
+      }
+
+      if (luxVal !== null && luxVal !== undefined) {
+        const lx = Math.round(luxVal);
+        document.getElementById("lux").innerText = lx;
+        const luxDetail = document.getElementById("lux-detail");
+        if (luxDetail) luxDetail.innerText = lx;
+        const luxStatus = document.getElementById("lux-status");
+        const luxStatusDetail = document.getElementById("lux-status-detail");
+        const luxMsg = luxVal < 50
+          ? { text: "Dunkel", cls: "small" }
+          : luxVal < 500
+            ? { text: "Normales Tageslicht", cls: "small status-ok" }
+            : { text: "Hell / Sonnenlicht", cls: "small status-ok" };
+        if (luxStatus) { luxStatus.innerText = luxMsg.text; luxStatus.className = luxMsg.cls; }
+        if (luxStatusDetail) { luxStatusDetail.innerText = luxMsg.text; luxStatusDetail.className = luxMsg.cls; }
+      }
+
+      if (uvVal !== null && uvVal !== undefined) {
+        document.getElementById("uv").innerText = uvVal;
+        const uvDetail = document.getElementById("uv-detail");
+        if (uvDetail) uvDetail.innerText = uvVal;
+        const uvStatus = document.getElementById("uv-status");
+        const uvStatusDetail = document.getElementById("uv-status-detail");
+        const uvMsg = uvVal < 50
+          ? { text: "Niedrig", cls: "small" }
+          : uvVal < 200
+            ? { text: "Mittel", cls: "small status-warn" }
+            : { text: "Hoch", cls: "small status-warn" };
+        if (uvStatus) { uvStatus.innerText = uvMsg.text; uvStatus.className = uvMsg.cls; }
+        if (uvStatusDetail) { uvStatusDetail.innerText = uvMsg.text; uvStatusDetail.className = uvMsg.cls; }
+      }
+
+      pushSensorReading(
+        (waterTemp !== null && waterTemp !== undefined) ? parseFloat(waterTemp) : null,
+        (luxVal    !== null && luxVal    !== undefined) ? parseFloat(luxVal)    : null,
+        (uvVal     !== null && uvVal     !== undefined) ? parseFloat(uvVal)     : null
+      );
+
+      updateHealthScore();
+    }
+
+    fetch("/api/sensors")
+      .then(res => res.json())
+      .then(data => updateSensorData(data))
+      .catch(() => console.log("Keine Sensor-Daten"));
+
+    setInterval(() => {
+      fetch("/api/sensors")
+        .then(res => res.json())
+        .then(data => updateSensorData(data))
+        .catch(() => {});
+    }, 5000);
+  </script>
+</body>
+</html>
